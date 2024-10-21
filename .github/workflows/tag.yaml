@@ -1,4 +1,4 @@
-name: Release Modules
+name: Release Go-Gather
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: npm install semantic-release @semantic-release/changelog @semantic-release/git @semantic-release/commit-analyzer @semantic-release/release-notes-generator conventional-changelog-conventionalcommits
 
-      - name: Find and release modules
+      - name: Tag release if needed
         run: |
-            echo "Running Semantic Release for module in $changed_dir"
+            echo "Running Semantic Release"
             npx semantic-release
