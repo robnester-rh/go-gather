@@ -251,7 +251,7 @@ func TestFileGatherer_copyFile_CreateSaverError(t *testing.T) {
 	if err == nil {
 		t.Error("expected an error, but got nil")
 	}
-	if got, expected := err.Error(), "failed to classify destination URI: unsupported source protocol: ftp"; got != expected {
+	if got, expected := err.Error(), "failed to classify destination URI: unsupported protocol: ftp"; got != expected {
 		t.Logf("Expected: %s, Got: %s", expected, got)
 		t.Fail()
 	}
@@ -349,7 +349,7 @@ func TestPinnedUrlRoundtrip(t *testing.T) {
 	if err := os.MkdirAll(source, 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(source, "file.txt"), []byte("hello"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(source, "file.txt"), []byte("hello"), 0600); err != nil {
 		t.Fatal(err)
 	}
 

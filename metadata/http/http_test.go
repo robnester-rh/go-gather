@@ -46,7 +46,7 @@ func TestHTTPMetadata_Get(t *testing.T) {
 	}
 }
 
-func TestFileMetadata_GetPinnedURL(t *testing.T) {
+func TestHTTPMetadata_GetPinnedURL(t *testing.T) {
 	tests := []struct {
 		name          string
 		url           string
