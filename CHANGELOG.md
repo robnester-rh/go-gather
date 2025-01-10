@@ -1,3 +1,9 @@
+## [0.0.6](https://github.com/enterprise-contract/go-gather/compare/v0.0.5...v0.0.6) (2025-01-10)
+
+### Bug Fixes
+
+* TLS or not determination ([7ac9200](https://github.com/enterprise-contract/go-gather/commit/7ac92008c381e8a198e18df011328e6cb708f657))
+
 ## [0.0.5](https://github.com/enterprise-contract/go-gather/compare/v0.0.4...v0.0.5) (2024-11-25)
 
 ### Bug Fixes
