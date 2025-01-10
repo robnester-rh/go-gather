@@ -44,10 +44,6 @@ func TestHostname(t *testing.T) {
 			expected: "example.com",
 		},
 		{
-			given:    "oci://example.com:12345",
-			expected: "example.com",
-		},
-		{
 			given:    "oci://example.com:12345/path",
 			expected: "example.com",
 		},

@@ -34,7 +34,7 @@ func SetupClient(repository *remote.Repository, transport http.RoundTripper) err
 	registry := repository.Reference.Host()
 
 	// If `--tls=false` was provided or accessing the registry via loopback with
-	// `--tls` flag was not set to true
+	// `--tls` flag not set to true
 	forceTLS := viper.IsSet("tls") && viper.GetBool("tls")
 	forcePlain := viper.IsSet("tls") && !viper.GetBool("tls")
 	if forcePlain || (network.IsLoopback(network.Hostname(registry)) && !forceTLS) {
