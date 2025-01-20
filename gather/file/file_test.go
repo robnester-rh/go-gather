@@ -17,357 +17,226 @@
 package file
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
-	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/enterprise-contract/go-gather/expand"
+	_ "github.com/enterprise-contract/go-gather/expand/zip" // Register zip expander
 )
 
-func TestFileGatherer_Gather(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+func TestFileGatherer_Matcher(t *testing.T) {
+	fg := &FileGatherer{}
 
-	// Create a temporary file inside the temporary directory
-	tempFile, err := os.CreateTemp(tempDir, "testfile")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tempFile.Close()
-
-	// Write some content to the temporary file
-	content := []byte("test content")
-	if _, err := tempFile.Write(content); err != nil {
-		t.Fatal(err)
+	tests := []struct {
+		name string
+		uri  string
+		want bool
+	}{
+		{"file:// prefix", "file://some/path", true},
+		{"file:: prefix", "file::another/path", true},
+		{"absolute path", "/etc/hosts", true},
+		{"relative path dot", "./myfile", true},
+		{"relative path dotdot", "../myfile", true},
+		{"no match", "http://example.com/file.txt", false},
 	}
 
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when the source is a file
-	sourceFile := tempFile.Name()
-	destinationFile := filepath.Join(tempDir, "destination_file")
-	_, err = gatherer.Gather(context.Background(), sourceFile, fmt.Sprintf("%s%s", "file://", filepath.Join(tempDir, "destination_file")))
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	// Assert that the destination file exists
-	if _, err := os.Stat(destinationFile); err != nil {
-		t.Errorf("destination file does not exist: %v", err)
-	}
-
-	// Test when the source is a directory
-	sourceDir := tempDir
-	destinationDir := filepath.Join(tempDir, "destination_dir")
-	_, err = gatherer.Gather(context.Background(), sourceDir, fmt.Sprintf("%s%s", "file://", destinationDir))
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	// Assert that the destination directory exists
-	if _, err := os.Stat(destinationDir); err != nil {
-		t.Errorf("destination directory does not exist: %v", err)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := fg.Matcher(tc.uri)
+			if got != tc.want {
+				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)
+			}
+		})
 	}
 }
 
-func TestFileGatherer_Gather_Error(t *testing.T) {
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
+func TestFileGatherer_Gather_File(t *testing.T) {
+	fg := &FileGatherer{}
 
-	// Test when os.Stat returns an error
-	source := "nonexistent_file"
-	destination := "destination_file"
-	_, err := gatherer.Gather(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-}
+	tempDir := t.TempDir()
+	srcFile := filepath.Join(tempDir, "test.txt")
+	dstFile := filepath.Join(tempDir, "dest.txt")
 
-// TestFileGatherer_URLParseError tests the error handling of the URL parsing
-func TestFileGatherer_Gather_URLParseError(t *testing.T) {
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when url.Parse returns an error
-	source := ":"
-	destination := "destination_file"
-	_, err := gatherer.Gather(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-	if err.Error() != "failed to parse source URI: parse \":\": missing protocol scheme" {
-		t.Logf("Expected: %s, Got: %s", "parse :: missing protocol scheme", err.Error())
-		t.Fail()
-	}
-}
-
-// TestFileGatherer_copyFile tests the copyFile method
-func TestFileGatherer_copyFile(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a temporary file inside the temporary directory
-	tempFile, err := os.CreateTemp(tempDir, "testfile")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tempFile.Close()
-
-	// Write some content to the temporary file
-	content := []byte("test content")
-	if _, err := tempFile.Write(content); err != nil {
-		t.Fatal(err)
+	content := []byte("Hello from FileGatherer!")
+	if err := os.WriteFile(srcFile, content, 0600); err != nil {
+		t.Fatalf("failed to create source file: %v", err)
 	}
 
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when the source is a file
-	sourceFile := tempFile.Name()
-	destinationFile := filepath.Join(tempDir, "destination_file")
-	_, err = gatherer.copyFile(context.Background(), sourceFile, fmt.Sprintf("%s%s", "file://", destinationFile))
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	// Assert that the destination file exists
-	if _, err := os.Stat(destinationFile); err != nil {
-		t.Errorf("destination file does not exist: %v", err)
-	}
-
-	// Test when the source is a directory
-	sourceDir := tempDir
-	destinationDir := filepath.Join(tempDir, "destination_dir")
-	_, err = gatherer.copyFile(context.Background(), sourceDir, fmt.Sprintf("%s%s", "file://", destinationDir))
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-}
-
-// TestFileGatherer_copyFile_Source_URIParseError tests the error handling of the URL parsing
-func TestFileGatherer_copyFile_Source_URIParseError(t *testing.T) {
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when url.Parse returns an error
-	source := ":"
-	destination := "destination_file"
-	_, err := gatherer.copyFile(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-	if err.Error() != "failed to parse source URI: parse \":\": missing protocol scheme" {
-		t.Logf("Expected: %s, Got: %s", "parse :: missing protocol scheme", err.Error())
-		t.Fail()
-	}
-}
-
-// TestFileGatherer_copyFile_OpenSourceFileError tests the error handling of opening the source file
-func TestFileGatherer_copyFile_OpenSourceFileError(t *testing.T) {
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when os.Open returns an error
-	source := "nonexistent_file"
-	destination := "destination_file"
-	_, err := gatherer.copyFile(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-}
-
-// TestFileGatherer_copyFile_Destination_URIParseError tests the error handling of the URL parsing
-func TestFileGatherer_copyFile_Destination_URIParseError(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a temporary file inside the temporary directory
-	tempFile, err := os.CreateTemp(tempDir, "testfile")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tempFile.Close()
-
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when url.Parse returns an error
-	source := tempFile.Name()
-	destination := ":"
-	_, err = gatherer.copyFile(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-	if err.Error() != "failed to parse destination URI: parse \":\": unknown protocol scheme" {
-		t.Logf("Expected: %s, Got: %s", "failed to parse destination URI: parse \":\": missing protocol scheme", err.Error())
-		t.Fail()
-	}
-}
-
-// TestFileGatherer_copyFile_CreateSaverError tests the error handling of creating the saver
-func TestFileGatherer_copyFile_CreateSaverError(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a temporary file inside the temporary directory
-	tempFile, err := os.CreateTemp(tempDir, "testfile")
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Write some content to the temporary file
-	content := []byte("test content")
-	if _, err := tempFile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when saver.NewSaver returns an error
-	source := tempFile.Name()
-	destination := "ftp://destination_file"
-	_, err = gatherer.copyFile(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-	if got, expected := err.Error(), "failed to classify destination URI: unsupported protocol: ftp"; got != expected {
-		t.Logf("Expected: %s, Got: %s", expected, got)
-		t.Fail()
-	}
-
-}
-
-func TestFileGatherer_copyDirectory_Source_URIParseError(t *testing.T) {
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when url.Parse returns an error
-	source := ":"
-	destination := "destination_dir"
-	_, err := gatherer.copyDirectory(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-	if err.Error() != "failed to parse source URI: parse \":\": missing protocol scheme" {
-		t.Logf("Expected: %s, Got: %s", "parse :: missing protocol scheme", err.Error())
-		t.Fail()
-	}
-}
-
-func TestFileGatherer_copyDirectory_Destination_URIParseError(t *testing.T) {
-	// Create a FileGatherer instance
-	gatherer := &FileGatherer{}
-
-	// Test when url.Parse returns an error
-	source := "source_dir"
-	destination := ":"
-	_, err := gatherer.copyDirectory(context.Background(), source, destination)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-	if err.Error() != "failed to parse destination URI: parse \":\": missing protocol scheme" {
-		t.Logf("Expected: %s, Got: %s", "failed to parse destination URI: parse \":\": missing protocol scheme", err.Error())
-		t.Fail()
-	}
-}
-
-// TestFileGatherer_getFileSha tests the getFileSha method
-func TestFileGatherer_getFileSha(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a temporary file inside the temporary directory
-	tempFile, err := os.CreateTemp(tempDir, "testfile")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer tempFile.Close()
-
-	// Write some content to the temporary file
-	content := []byte("test content")
-	if _, err := tempFile.Write(content); err != nil {
-		t.Fatal(err)
-	}
-
-	// Test when the source is a file
-	sourceFile := tempFile.Name()
-	fileSha, err := getFileSha(sourceFile)
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	// Assert that the fileSha is not empty
-	if fileSha == "" {
-		t.Error("expected fileSha to be non-empty, but got empty")
-	}
-}
-
-// TestFileGatherer_getFileSha_OpenFileError tests the error handling of opening the file
-func TestFileGatherer_getFileSha_OpenFileError(t *testing.T) {
-	// Test when os.Open returns an error
-	source := "nonexistent_file"
-	_, err := getFileSha(source)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-	if err.Error() != "failed to open file: open nonexistent_file: no such file or directory" {
-		t.Logf("Expected: %s, Got: %s", "failed to open file: open nonexistent_file: no such file or directory", err.Error())
-		t.Fail()
-	}
-
-}
-
-func TestPinnedUrlRoundtrip(t *testing.T) {
-	// setup
-	tmp := t.TempDir()
-	source := filepath.Join(tmp, "source")
-	if err := os.MkdirAll(source, 0755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(source, "file.txt"), []byte("hello"), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	file := &FileGatherer{}
-	destination := filepath.Join(tmp, "destination")
 	ctx := context.Background()
-	m, err := file.Gather(ctx, source, destination)
+	meta, err := fg.Gather(ctx, srcFile, dstFile)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Gather returned an unexpected error: %v", err)
 	}
 
-	pinned, err := m.GetPinnedURL(source)
-	if err != nil {
-		t.Fatal(err)
+	if _, err := os.Stat(dstFile); os.IsNotExist(err) {
+		t.Fatalf("expected file %s to exist, but it does not", dstFile)
 	}
 
-	_, err = file.Gather(ctx, pinned, destination)
-	if err != nil {
-		t.Fatal(err)
+	fsMeta, ok := meta.(*FSMetadata)
+	if !ok {
+		t.Fatalf("expected FSMetadata, got %T", meta)
 	}
+	if fsMeta.Path != dstFile {
+		t.Errorf("expected metadata path=%s, got %s", dstFile, fsMeta.Path)
+	}
+	if fsMeta.Size != int64(len(content)) {
+		t.Errorf("expected metadata size=%d, got %d", len(content), fsMeta.Size)
+	}
+	if fsMeta.Timestamp == "" {
+		t.Error("expected timestamp to be set, got empty string")
+	}
+}
+
+func TestFileGatherer_Gather_Directory(t *testing.T) {
+	fg := &FileGatherer{}
+
+	tempDir := t.TempDir()
+	srcDir := filepath.Join(tempDir, "source_dir")
+	dstDir := filepath.Join(tempDir, "dest_dir")
+
+	if err := os.Mkdir(srcDir, 0755); err != nil {
+		t.Fatalf("failed to create source directory: %v", err)
+	}
+	file1 := filepath.Join(srcDir, "file1.txt")
+	file2 := filepath.Join(srcDir, "file2.txt")
+	if err := os.WriteFile(file1, []byte("file1"), 0600); err != nil {
+		t.Fatalf("failed to write file1: %v", err)
+	}
+	if err := os.WriteFile(file2, []byte("file2"), 0600); err != nil {
+		t.Fatalf("failed to write file2: %v", err)
+	}
+
+	ctx := context.Background()
+	meta, err := fg.Gather(ctx, srcDir, dstDir)
+	if err != nil {
+		t.Fatalf("Gather returned an unexpected error: %v", err)
+	}
+
+	copied1 := filepath.Join(dstDir, "file1.txt")
+	copied2 := filepath.Join(dstDir, "file2.txt")
+	if _, err := os.Stat(copied1); os.IsNotExist(err) {
+		t.Fatalf("expected file %s to exist, but it does not", copied1)
+	}
+	if _, err := os.Stat(copied2); os.IsNotExist(err) {
+		t.Fatalf("expected file %s to exist, but it does not", copied2)
+	}
+
+	fsMeta, ok := meta.(*FSMetadata)
+	if !ok {
+		t.Fatalf("expected FSMetadata, got %T", meta)
+	}
+	if fsMeta.Path != dstDir {
+		t.Errorf("expected metadata path=%s, got %s", dstDir, fsMeta.Path)
+	}
+	if fsMeta.Size <= 0 {
+		t.Errorf("expected size > 0, got %d", fsMeta.Size)
+	}
+	if fsMeta.Timestamp == "" {
+		t.Error("expected timestamp to be set, got empty string")
+	}
+}
+
+func TestFileGatherer_Gather_NotExist(t *testing.T) {
+	fg := &FileGatherer{}
+
+	tempDir := t.TempDir()
+	srcFile := filepath.Join(tempDir, "no_such_file.txt")
+	dstFile := filepath.Join(tempDir, "dest.txt")
+
+	ctx := context.Background()
+	_, err := fg.Gather(ctx, srcFile, dstFile)
+	if err == nil {
+		t.Fatal("expected an error for non-existent source, got nil")
+	}
+	if !strings.Contains(err.Error(), "source file does not exist") {
+		t.Errorf("expected error about 'source file does not exist', got %v", err)
+	}
+}
+
+func TestFileGatherer_Gather_Cancel(t *testing.T) {
+	fg := &FileGatherer{}
+
+	tempDir := t.TempDir()
+	srcFile := filepath.Join(tempDir, "test.txt")
+	dstFile := filepath.Join(tempDir, "dest.txt")
+	if err := os.WriteFile(srcFile, []byte("some content"), 0600); err != nil {
+		t.Fatalf("failed to create source file: %v", err)
+	}
+
+	// Create a context that's already canceled
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := fg.Gather(ctx, srcFile, dstFile)
+	if err == nil {
+		t.Fatal("expected an error due to context cancellation, got nil")
+	}
+	if ctx.Err() != context.Canceled {
+		t.Errorf("expected context to be canceled, got %v", ctx.Err())
+	}
+}
+
+func TestFileGatherer_Gather_Compressed(t *testing.T) {
+	fg := &FileGatherer{}
+
+	tempDir := t.TempDir()
+	srcZip := filepath.Join(tempDir, "test.zip")
+	dstDir := filepath.Join(tempDir, "extracted")
+
+	if err := createZipFile(srcZip, "hello.txt", "Hello Zip"); err != nil {
+		t.Fatalf("failed to create test zip file: %v", err)
+	}
+
+	if expand.GetExpander("zip") == nil {
+		t.Skip("no zip expander registered. Register a ZipExpander first or remove this test.")
+	}
+
+	ctx := context.Background()
+	meta, err := fg.Gather(ctx, srcZip, dstDir)
+	if err != nil {
+		t.Fatalf("Gather returned an unexpected error: %v", err)
+	}
+
+	extractedFile := filepath.Join(dstDir, "hello.txt")
+	if _, err := os.Stat(extractedFile); os.IsNotExist(err) {
+		t.Fatalf("expected %s to exist, but it does not", extractedFile)
+	}
+
+	fsMeta, ok := meta.(*FSMetadata)
+	if !ok {
+		t.Fatalf("expected FSMetadata, got %T", meta)
+	}
+	if fsMeta.Path != dstDir {
+		t.Errorf("expected path=%s, got %s", dstDir, fsMeta.Path)
+	}
+	if fsMeta.Size <= 0 {
+		t.Errorf("expected size > 0, got %d", fsMeta.Size)
+	}
+	if fsMeta.Timestamp == "" {
+		t.Error("expected timestamp to be set, got empty string")
+	}
+}
+
+func createZipFile(zipPath, fileName, content string) error {
+	out, err := os.Create(zipPath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	zipWriter := zip.NewWriter(out)
+	defer zipWriter.Close()
+
+	writer, err := zipWriter.Create(fileName)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(writer, bytes.NewBufferString(content))
+	return err
 }

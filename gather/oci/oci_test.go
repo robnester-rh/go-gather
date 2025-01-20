@@ -17,194 +17,255 @@
 package oci
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"os"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 
-	ocispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/stretchr/testify/assert"
+	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"oras.land/oras-go/v2"
-
-	"github.com/enterprise-contract/go-gather/metadata/oci"
+	"oras.land/oras-go/v2/content/memory"
 )
 
-func getRegistryURL(src string) string {
-	parts := strings.Split(src, "/")
-	lastPart := parts[len(parts)-1]
-	if strings.Contains(lastPart, ":") {
-		return src
-	}
-	return src + ":latest"
-}
+func TestOCIGatherer_Matcher(t *testing.T) {
+	g := &OCIGatherer{}
 
-// TestGetRegistryURL tests the getRegistryURL function.
-func TestGetRegistryURL(t *testing.T) {
-	testCases := []struct {
-		src      string
-		expected string
+	tests := []struct {
+		name string
+		uri  string
+		want bool
 	}{
-		{src: "docker.io/library/alpine", expected: "docker.io/library/alpine:latest"},
-		{src: "docker.io/library/alpine:3.12", expected: "docker.io/library/alpine:3.12"},
-		{src: "https://docker.io/library/alpine", expected: "https://docker.io/library/alpine:latest"},
-		{src: "alpine", expected: "alpine:latest"},
+		{"oci protocol slash slash", "oci://myregistry.example.com/repo", true},
+		{"oci protocol double colon", "oci::myregistry.example.com/repo", true},
+		{"no prefix", "myregistry.example.com/repo", false},
+		{"other prefix", "http://myregistry.example.com/repo", false},
 	}
 
-	for _, tc := range testCases {
-		actual := getRegistryURL(tc.src)
-		if actual != tc.expected {
-			t.Errorf("Expected getRegistryURL(%s) to return %s, but got %s", tc.src, tc.expected, actual)
-		}
-	}
-}
-
-func TestOCIURLParse(t *testing.T) {
-	testCases := []struct {
-		source   string
-		expected string
-	}{
-		{source: "docker.io/library/alpine", expected: "docker.io/library/alpine"},
-		{source: "https://docker.io/library/alpine", expected: "docker.io/library/alpine"},
-		{source: "alpine", expected: "alpine"},
-		{source: "https://example.com/image:tag", expected: "example.com/image:tag"},
-	}
-
-	for _, tc := range testCases {
-		actual := ociURLParse(tc.source)
-		if actual != tc.expected {
-			t.Errorf("Expected ociURLParse(%s) to return %s, but got %s", tc.source, tc.expected, actual)
-		}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := g.Matcher(tc.uri)
+			if got != tc.want {
+				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)
+			}
+		})
 	}
 }
 
-// TestOCIGatherer_Gather_Success tests the Gather function when it's successful.
 func TestOCIGatherer_Gather_Success(t *testing.T) {
-	ctx := context.TODO()
-	source := "example.com/org/repo"
-	destination := "/tmp/foo"
-	orasCopy = func(_ context.Context, _ oras.ReadOnlyTarget, _ string, _ oras.Target, _ string, _ oras.CopyOptions) (ocispec.Descriptor, error) {
-		return ocispec.Descriptor{Digest: "fa93b01658e3a5a1686dc3ae55f170d8de487006fb53a28efcd12ab0710a2e5f"}, nil
+	artifactRef := "127.0.0.1:5000/my-repo:latest"
+	memoryStore := memory.New()
+
+	err := pushTestArtifact(memoryStore, artifactRef, []byte("test data"))
+	if err != nil {
+		t.Fatalf("failed to push test artifact: %v", err)
 	}
 
-	t.Run("Gather", func(t *testing.T) {
-		gatherer := &OCIGatherer{}
-		m, err := gatherer.Gather(ctx, source, destination)
-		if err != nil {
-			t.Errorf("Expected error to be nil, but got: %v", err)
+	oldOrasCopy := orasCopy
+	defer func() { orasCopy = oldOrasCopy }()
+	orasCopy = func(ctx context.Context, srcOras oras.ReadOnlyTarget, srcRef string, dstOras oras.Target, dstRef string, opts oras.CopyOptions) (v1.Descriptor, error) {
+		if srcRef != artifactRef {
+			return v1.Descriptor{}, fmt.Errorf("unexpected reference %s, want %s", srcRef, artifactRef)
 		}
-		assert.Equal(t, "fa93b01658e3a5a1686dc3ae55f170d8de487006fb53a28efcd12ab0710a2e5f", m.(*oci.OCIMetadata).Digest, "Digest should be equal, expected: %s, got: %s", "fa93b01658e3a5a1686dc3ae55f170d8de487006fb53a28efcd12ab0710a2e5f", m.(*oci.OCIMetadata).Digest)
-	})
-	t.Cleanup(func() {
-		// Cleanup the destination directory
-		os.RemoveAll(destination)
-	})
-}
 
-// TestOCIGatherer_Gather_Failure tests the Gather function when it fails.
-func TestOCIGatherer_Gather_Failure(t *testing.T) {
-	ctx := context.TODO()
-	source := "example.com/org/repo"
-	destination := "/tmp/foo"
-	expectedError := fmt.Errorf("error")
-	orasCopy = func(_ context.Context, _ oras.ReadOnlyTarget, _ string, _ oras.Target, _ string, _ oras.CopyOptions) (ocispec.Descriptor, error) {
-		return ocispec.Descriptor{}, expectedError
+		return oras.Copy(ctx, memoryStore, artifactRef, dstOras, dstRef, opts)
 	}
 
-	t.Run("Gather", func(t *testing.T) {
-		gatherer := &OCIGatherer{}
-		_, err := gatherer.Gather(ctx, source, destination)
-		assert.Equal(t, fmt.Errorf("pulling policy: %w", expectedError), err, "Error should be equal, expected: %s, got: %s", err)
-	})
-	t.Cleanup(func() {
-		// Cleanup the destination directory
-		os.RemoveAll(destination)
-	})
+	g := &OCIGatherer{}
+
+	dstDir := t.TempDir()
+
+	ctx := context.Background()
+
+	srcURI := "oci://" + artifactRef // e.g. "oci://localhost:5000/my-repo:latest"
+	meta, err := g.Gather(ctx, srcURI, dstDir)
+	if err != nil {
+		t.Fatalf("Gather returned an error: %v", err)
+	}
+
+	ociMeta, ok := meta.(*OCIMetadata)
+	if !ok {
+		t.Fatalf("expected *OCIMetadata, got %T", meta)
+	}
+	if ociMeta.Path != dstDir {
+		t.Errorf("expected Path=%s, got %s", dstDir, ociMeta.Path)
+	}
+	if ociMeta.Digest == "" {
+		t.Error("expected a Digest, got empty")
+	}
+	if ociMeta.Timestamp == "" {
+		t.Error("expected a Timestamp, got empty")
+	}
 }
 
-// TestOCIGatherer_Gather_Invalid_URIs tests the Gather function with invalid source URIs.
-func TestOCIGatherer_Gather_Invalid_URIs(t *testing.T) {
-	ctx := context.TODO()
+func TestOCIGatherer_Gather_CanceledContext(t *testing.T) {
+	g := &OCIGatherer{}
 
-	testCases := []struct {
-		name        string
-		source      string
-		destination string
-		expectedErr error
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // immediate cancellation
+
+	_, err := g.Gather(ctx, "oci://localhost:5000/repo", t.TempDir())
+	if err == nil {
+		t.Fatal("expected an error due to canceled context, got nil")
+	}
+	if !errors.Is(err, context.Canceled) {
+		t.Errorf("expected context.Canceled, got %v", err)
+	}
+}
+
+func TestOCIGatherer_Gather_InvalidRef(t *testing.T) {
+	g := &OCIGatherer{}
+	ctx := context.Background()
+
+	// Provide a reference that fails parse
+	srcURI := "oci://___invalid@@"
+
+	_, err := g.Gather(ctx, srcURI, t.TempDir())
+	if err == nil {
+		t.Fatal("expected an error for invalid ref, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to parse reference") {
+		t.Errorf("expected 'failed to parse reference' in error, got %v", err)
+	}
+}
+
+func TestOCIGatherer_Gather_MissingArtifact(t *testing.T) {
+	g := &OCIGatherer{}
+
+	// Temporarily override orasCopy to force an error
+	oldOrasCopy := orasCopy
+	defer func() { orasCopy = oldOrasCopy }()
+
+	orasCopy = func(ctx context.Context, src oras.ReadOnlyTarget, srcRef string, dst oras.Target, dstRef string, opts oras.CopyOptions) (v1.Descriptor, error) {
+		return v1.Descriptor{}, fmt.Errorf("pulling policy: artifact not found")
+	}
+
+	ctx := context.Background()
+	_, err := g.Gather(ctx, "oci://localhost:5000/no-such:latest", t.TempDir())
+	if err == nil {
+		t.Fatal("expected error about missing artifact, got nil")
+	}
+	if !strings.Contains(err.Error(), "pulling policy: artifact not found") {
+		t.Errorf("expected artifact not found error, got %v", err)
+	}
+}
+
+func TestOCIGatherer_Gather_CreateDirError(t *testing.T) {
+	g := &OCIGatherer{}
+
+	dstDir := "/root/somepath" // likely fails unless test runs as root
+
+	ctx := context.Background()
+	_, err := g.Gather(ctx, "oci://localhost:5000/repo:latest", dstDir)
+	if err == nil {
+		t.Fatal("expected directory creation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "failed to create directory") {
+		t.Errorf("expected 'failed to create directory' in error, got %v", err)
+	}
+}
+
+func TestOCIGatherer_ociURLParse(t *testing.T) {
+	tests := []struct {
+		name   string
+		source string
+		want   string
 	}{
-		{
-			name:        "Invalid source URI",
-			source:      "invalid",
-			destination: "/tmp/foo",
-			expectedErr: fmt.Errorf("failed to parse reference: invalid reference: missing registry or repository"),
-		},
-		{
-			name:        "Invalid source URI with tag",
-			source:      "invalid:tag",
-			destination: "/tmp/foo",
-			expectedErr: fmt.Errorf("failed to parse reference: invalid reference: missing registry or repository"),
-		},
-		{
-			name:        "Invalid source URI with HTTPS",
-			source:      "https://invalid",
-			destination: "/tmp/foo",
-			expectedErr: fmt.Errorf("failed to parse reference: invalid reference: missing registry or repository"),
-		},
+		{"with double colon", "oci::myregistry.com/myrepo:tag", "myregistry.com/myrepo:tag"},
+		{"with slash slash", "oci://myregistry.com/myrepo:tag", "myregistry.com/myrepo:tag"},
+		{"no prefix", "myregistry.com/myrepo:tag", "myregistry.com/myrepo:tag"},
 	}
 
-	for _, tc := range testCases {
+	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gatherer := &OCIGatherer{}
-			metadata, err := gatherer.Gather(ctx, tc.source, tc.destination)
-
-			if err.Error() != tc.expectedErr.Error() {
-				t.Errorf("Expected error: %v, but got: %v", tc.expectedErr, err)
+			got := ociURLParse(tc.source)
+			if got != tc.want {
+				t.Errorf("ociURLParse(%q) = %q, want %q", tc.source, got, tc.want)
 			}
-
-			if metadata != nil {
-				t.Errorf("Expected metadata to be nil, but got: %v", metadata)
-			}
-		})
-		t.Cleanup(func() {
-			// Cleanup the destination directory
-			os.RemoveAll(tc.destination)
 		})
 	}
 }
 
-// TestOCIGatherer_Gather_ErorrCreatingNewRepository tests the Gather function with an error creating a new repository client.
-func TestOCIGatherer_Gather_ErorrCreatingNewRepository(t *testing.T) {
-	testCases := []struct {
-		name        string
-		source      string
-		destination string
-		expectedErr error
-	}{
-		{
-			name:        "Error creating new repository",
-			source:      "docker.io",
-			destination: "/tmp/foo",
-			expectedErr: fmt.Errorf("failed to parse reference: invalid reference: missing registry or repository"),
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.TODO()
-			gatherer := &OCIGatherer{}
-			metadata, err := gatherer.Gather(ctx, tc.source, tc.destination)
+func TestOCIGatherer_Gather_ReplaceLocalhost(t *testing.T) {
+	g := &OCIGatherer{}
 
-			if err.Error() != tc.expectedErr.Error() {
-				t.Errorf("Expected error: %v, but got: %v", tc.expectedErr, err)
-			}
+	oldOrasCopy := orasCopy
+	defer func() { orasCopy = oldOrasCopy }()
 
-			if metadata != nil {
-				t.Errorf("Expected metadata to be nil, but got: %v", metadata)
-			}
-		})
-		t.Cleanup(func() {
-			// Cleanup the destination directory
-			os.RemoveAll(tc.destination)
-		})
+	var gotRef string
+	orasCopy = func(ctx context.Context, src oras.ReadOnlyTarget, srcRef string, dst oras.Target, dstRef string, opts oras.CopyOptions) (v1.Descriptor, error) {
+		gotRef = srcRef
+		return v1.Descriptor{}, nil
 	}
 
+	ctx := context.Background()
+	_, _ = g.Gather(ctx, "oci://localhost:5000/myrepo", t.TempDir())
+
+	// Expect the final reference to have "127.0.0.1"
+	if !strings.Contains(gotRef, "127.0.0.1") {
+		t.Errorf("expected reference to contain 127.0.0.1, got %s", gotRef)
+	}
+}
+
+// pushTestArtifact stores data in a memory.Store under a final reference (e.g., "localhost:5000/my-repo:latest").
+func pushTestArtifact(m *memory.Store, finalRef string, data []byte) error {
+	ctx := context.Background()
+
+	// 1. Build an OCI descriptor for this blob.
+	d := digest.FromBytes(data)
+	desc := v1.Descriptor{
+		MediaType: "application/octet-stream",
+		Digest:    d,
+		Size:      int64(len(data)),
+	}
+
+	// 2. Push the blob, storing by digest. This does NOT create a named reference.
+	if err := m.Push(ctx, desc, bytes.NewReader(data)); err != nil {
+		return fmt.Errorf("failed to push blob into memory store: %w", err)
+	}
+
+	// 3. Tag the blob inside memory store with an internal name so we can reference it.
+	//    For example, "sourceRef" is any string you like.
+	sourceRef := "my-blob-name"
+	if err := m.Tag(ctx, desc, sourceRef); err != nil {
+		return fmt.Errorf("failed to tag blob in memory store: %w", err)
+	}
+
+	// 4. Now we can oras.Copy from "my-blob-name" to the finalRef,
+	//    effectively "tagging" the blob in the store as finalRef.
+	_, err := oras.Copy(ctx, m, sourceRef, m, finalRef, oras.DefaultCopyOptions)
+	if err != nil {
+		return fmt.Errorf("failed to alias data in memory store: %w", err)
+	}
+
+	return nil
+}
+
+// Optional TestOCIMetadata_Get to show retrieving the raw metadata structure
+func TestOCIMetadata_Get(t *testing.T) {
+	o := &OCIMetadata{
+		Path:      "/tmp/some/path",
+		Digest:    "sha256:123abc",
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+
+	got := o.Get()
+	if !reflect.DeepEqual(got, o) {
+		t.Errorf("Get() = %+v, want same struct pointer %+v", got, o)
+	}
+}
+
+// Optional TestOCIMetadata_GetDigest ensures the Digest is returned properly
+func TestOCIMetadata_GetDigest(t *testing.T) {
+	o := &OCIMetadata{
+		Digest: "sha256:123abc",
+	}
+	got := o.GetDigest()
+	if got != "sha256:123abc" {
+		t.Errorf("GetDigest() = %q, want %q", got, "sha256:123abc")
+	}
 }
