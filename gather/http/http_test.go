@@ -18,293 +18,199 @@ package http
 
 import (
 	"context"
-	"fmt"
-	h "net/http"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
-
-	"github.com/enterprise-contract/go-gather/metadata/http"
 )
 
-func TestNewHTTPGatherer(t *testing.T) {
-	gatherer := NewHTTPGatherer()
+func TestHTTPGatherer_Matcher(t *testing.T) {
+	g := &HTTPGatherer{}
 
-	// Verify the timeout value
-	expectedTimeout := 15 * time.Second
-	if gatherer.Client.Timeout != expectedTimeout {
-		t.Errorf("unexpected timeout value: got %v, want %v", gatherer.Client.Timeout, expectedTimeout)
+	testCases := []struct {
+		name string
+		uri  string
+		want bool
+	}{
+		{"http scheme", "http://example.com/file.txt", true},
+		{"https scheme", "https://example.com/file.txt", true},
+		{"no scheme", "example.com/file.txt", false},
+		{"ftp scheme", "ftp://example.com/file.txt", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := g.Matcher(tc.uri)
+			if got != tc.want {
+				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)
+			}
+		})
 	}
 }
 
-func TestHTTPGatherer_Gather_WithTrailingSlash(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
+func TestHTTPGatherer_Gather_Success(t *testing.T) {
+	testData := "Hello from test server!"
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(testData))
+	})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	g := NewHTTPGatherer()
+
+	tempDir := t.TempDir()
+	dest := filepath.Join(tempDir, "downloaded_file.txt")
+
+	ctx := context.Background()
+	meta, err := g.Gather(ctx, server.URL+"/subdir/file.txt", dest)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Gather returned unexpected error: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
-	tempDir = fmt.Sprintf("%s/", tempDir)
 
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(h.HandlerFunc(func(w h.ResponseWriter, r *h.Request) {
-		// Set the Content-Type header
-		w.Header().Set("Content-Type", "text/plain")
-
-		// Write the foo.bar content
-		fmt.Fprint(w, "Hello, World!")
-	}))
-	defer mockServer.Close()
-
-	// Create a new HTTPGatherer instance
-	gatherer := NewHTTPGatherer()
-
-	// Call the Gather method with the mock server URL and the temporary directory
-	m, err := gatherer.Gather(context.Background(), fmt.Sprintf("%s/foo.bar", mockServer.URL), fmt.Sprintf("%s/", tempDir))
+	fileContent, err := os.ReadFile(dest)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to read downloaded file: %v", err)
+	}
+	if string(fileContent) != testData {
+		t.Errorf("expected content %q, got %q", testData, string(fileContent))
 	}
 
-	// Verify the metadata
-	expectedStatusCode := h.StatusOK
-	if m.(http.HTTPMetadata).StatusCode != expectedStatusCode {
-		t.Errorf("unexpected status code: got %d, want %d", m.(http.HTTPMetadata).StatusCode, expectedStatusCode)
+	httpMeta, ok := meta.(*HTTPMetadata)
+	if !ok {
+		t.Fatalf("expected *HTTPMetadata, got %T", meta)
 	}
-
-	expectedContentLength := int64(13)
-	if m.(http.HTTPMetadata).ContentLength != expectedContentLength {
-		t.Errorf("unexpected content length: got %d, want %d", m.(http.HTTPMetadata).ContentLength, expectedContentLength)
+	if httpMeta.URI != server.URL+"/subdir/file.txt" {
+		t.Errorf("expected URI=%s, got %s", server.URL+"/subdir/file.txt", httpMeta.URI)
 	}
-
-	expectedDestination := fmt.Sprintf("%sfoo.bar", tempDir)
-	if m.(http.HTTPMetadata).Destination != expectedDestination {
-		t.Errorf("unexpected destination: got %s, want %s", m.(http.HTTPMetadata).Destination, expectedDestination)
+	if httpMeta.Path != dest {
+		t.Errorf("expected Path=%s, got %s", dest, httpMeta.Path)
 	}
-
-	// Verify the downloaded file
-	filePath := filepath.Join(tempDir, "/foo.bar")
-	fileContent, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Fatal(err)
+	if httpMeta.ResponseCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", httpMeta.ResponseCode)
 	}
-
-	expectedFileContent := "Hello, World!"
-	if string(fileContent) != expectedFileContent {
-		t.Errorf("unexpected file content: got %s, want %s", string(fileContent), expectedFileContent)
+	if httpMeta.Size != int64(len(testData)) {
+		t.Errorf("expected size=%d, got %d", len(testData), httpMeta.Size)
+	}
+	if httpMeta.Timestamp == "" {
+		t.Error("expected non-empty timestamp")
 	}
 }
 
-// TestHTTPGatherer_Gather_WithoutTrailingSlash tests the Gather method with a destination that does not have a trailing slash.
-func TestHTTPGatherer_Gather_WithoutTrailingSlash(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+func TestHTTPGatherer_Gather_NoScheme(t *testing.T) {
+	g := NewHTTPGatherer()
+	ctx := context.Background()
 
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(h.HandlerFunc(func(w h.ResponseWriter, r *h.Request) {
-		// Set the Content-Type header
-		w.Header().Set("Content-Type", "text/plain")
+	tempDir := t.TempDir()
+	dest := filepath.Join(tempDir, "file.txt")
 
-		// Write the foo.bar content
-		fmt.Fprint(w, "Hello, World!")
-	}))
-	defer mockServer.Close()
-
-	// Create a new HTTPGatherer instance
-	gatherer := NewHTTPGatherer()
-
-	// Call the Gather method with the mock server URL and the temporary directory
-	m, err := gatherer.Gather(context.Background(), fmt.Sprintf("%s/foo.bar", mockServer.URL), tempDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Verify the metadata
-	expectedStatusCode := h.StatusOK
-	if m.(http.HTTPMetadata).StatusCode != expectedStatusCode {
-		t.Errorf("unexpected status code: got %d, want %d", m.(http.HTTPMetadata).StatusCode, expectedStatusCode)
-	}
-
-	expectedContentLength := int64(13)
-	if m.(http.HTTPMetadata).ContentLength != expectedContentLength {
-		t.Errorf("unexpected content length: got %d, want %d", m.(http.HTTPMetadata).ContentLength, expectedContentLength)
-	}
-
-	expectedDestination := fmt.Sprintf("%s/foo.bar", tempDir)
-	if m.(http.HTTPMetadata).Destination != expectedDestination {
-		t.Errorf("unexpected destination: got %s, want %s", m.(http.HTTPMetadata).Destination, expectedDestination)
-	}
-
-	// Verify the downloaded file
-	filePath := filepath.Join(tempDir, "/foo.bar")
-	fileContent, err := os.ReadFile(filePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedFileContent := "Hello, World!"
-	if string(fileContent) != expectedFileContent {
-		t.Errorf("unexpected file content: got %s, want %s", string(fileContent), expectedFileContent)
-	}
-}
-
-// TestHTTPGatherer_Gather_ParseError tests the Gather method with a url.Parse error.
-func TestHTTPGatherer_Gather_ParseError(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a new HTTPGatherer instance
-	gatherer := NewHTTPGatherer()
-
-	// Call the Gather method with an unparsable source URI
-	_, err = gatherer.Gather(context.Background(), ":", tempDir)
+	_, err := g.Gather(ctx, "example.com/file.txt", dest)
 	if err == nil {
-		t.Error("expected an error, but got nil")
+		t.Fatal("expected an error when no scheme is provided, got nil")
+	}
+	if !strings.Contains(err.Error(), "no source scheme provided") {
+		t.Errorf("expected error mentioning missing scheme, got %v", err)
 	}
 }
 
-// TestHTTPGatherer_Gather_InvalidSource tests the Gather method with an invalid source URI.
-func TestHTTPGatherer_Gather_InvalidSource(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
+func TestHTTPGatherer_Gather_NoPath(t *testing.T) {
+	g := NewHTTPGatherer()
+	ctx := context.Background()
+
+	tempDir := t.TempDir()
+	dest := filepath.Join(tempDir, "file.txt")
+
+	// Provide a URL with a scheme but no path
+	_, err := g.Gather(ctx, "http://example.com", dest)
+	if err == nil {
+		t.Fatal("expected error when URL has no path, got nil")
+	}
+	if !strings.Contains(err.Error(), "specify a path to a file to download") {
+		t.Errorf("expected error about specifying a path, got %v", err)
+	}
+}
+
+func TestHTTPGatherer_Gather_Non200(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	g := NewHTTPGatherer()
+	tempDir := t.TempDir()
+	dest := filepath.Join(tempDir, "file.txt")
+
+	ctx := context.Background()
+	_, err := g.Gather(ctx, server.URL+"/missing-file.txt", dest)
+	if err == nil {
+		t.Fatal("expected an error for non-200 response, got nil")
+	}
+	if !strings.Contains(err.Error(), "received non-200 response code") {
+		t.Errorf("expected error about non-200 response, got %v", err)
+	}
+}
+
+func TestHTTPGatherer_Gather_EmptyDirDestination(t *testing.T) {
+	testData := "Test data"
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(testData))
+	})
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	g := NewHTTPGatherer()
+
+	tempDir := t.TempDir()
+
+	dest := filepath.Join(tempDir, "someDir") + "/"
+
+	ctx := context.Background()
+	srcURL := server.URL + "/download-me.bin"
+	meta, err := g.Gather(ctx, srcURL, dest)
 	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a new HTTPGatherer instance
-	gatherer := NewHTTPGatherer()
-
-	// Call the Gather method with an invalid source URI
-	_, err = gatherer.Gather(context.Background(), "invalid-url", tempDir)
-	if err == nil {
-		t.Error("expected an error, but got nil")
-	}
-}
-
-func TestHTTPGatherer_Gather_NewRequestWithContextError(t *testing.T) {
-	mockServer := httptest.NewServer(h.HandlerFunc(func(w h.ResponseWriter, r *h.Request) {
-		w.WriteHeader(h.StatusOK)
-	}))
-	defer mockServer.Close()
-
-	h := &HTTPGatherer{}
-
-	// Pass a nil context to the Gather method to force an error.
-	_, err := h.Gather(nil, fmt.Sprintf("%s/foo.bar", mockServer.URL), "/tmp") //nolint:staticcheck
-	if err == nil {
-		t.Fatal("expected an error but got nil")
+		t.Fatalf("Gather returned error: %v", err)
 	}
 
-	expectedErrMsg := "error creating request: net/http: nil Context"
-	if err.Error() != expectedErrMsg {
-		t.Fatalf("expected error message %q but got %q", expectedErrMsg, err.Error())
-	}
-}
-
-// TestHTTPGatherer_Gather_BadStatusCode tests the Gather method with a bad status code.
-func TestHTTPGatherer_Gather_BadStatusCode(t *testing.T) {
-	mockServer := httptest.NewServer(h.HandlerFunc(func(w h.ResponseWriter, r *h.Request) {
-		w.WriteHeader(404)
-	}))
-	defer mockServer.Close()
-
-	h := &HTTPGatherer{}
-
-	_, err := h.Gather(context.Background(), fmt.Sprintf("%s/foo.bar", mockServer.URL), "/tmp")
-	if err == nil {
-		t.Fatal("expected an error but got nil")
+	httpMeta := meta.(*HTTPMetadata)
+	expectedPath := filepath.Join(dest, "download-me.bin")
+	if httpMeta.Path != expectedPath {
+		t.Errorf("expected path=%s, got %s", expectedPath, httpMeta.Path)
 	}
 
-	expectedErrMsg := "response code error: 404"
-	if err.Error() != expectedErrMsg {
-		t.Fatalf("expected error message %q but got %q", expectedErrMsg, err.Error())
-	}
-}
-
-// TestHTTPGatherer_Gather_HTTPError tests the Gather method with an HTTP error.
-func TestHTTPGatherer_Gather_HTTPError(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
+	fileContent, err := os.ReadFile(expectedPath)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed to read downloaded file: %v", err)
 	}
-	defer os.RemoveAll(tempDir)
-
-	// Create a mock HTTP server that returns an error
-	mockServer := httptest.NewServer(h.HandlerFunc(func(w h.ResponseWriter, r *h.Request) {
-		w.WriteHeader(404)
-	}))
-	defer mockServer.Close()
-
-	// Create a new HTTPGatherer instance
-	gatherer := NewHTTPGatherer()
-
-	// Call the Gather method with the mock server URL and the temporary directory
-	_, err = gatherer.Gather(context.Background(), mockServer.URL, tempDir)
-	if err == nil {
-		t.Error("expected an error, but got nil")
+	if string(fileContent) != testData {
+		t.Errorf("expected content=%q, got %q", testData, string(fileContent))
 	}
 }
 
-// TestHTTPGatherer_Gather_Client_Do_Error tests the Gather method with an error from http.Client.Do.
-func TestHTTPGatherer_Gather_Client_Do_Error(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir, err := os.MkdirTemp("", "test")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tempDir)
+func TestHTTPGatherer_Gather_CanceledContext(t *testing.T) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Simulate a slow response so we can cancel the context
+		time.Sleep(2 * time.Second)
+		_, _ = w.Write([]byte("Large amount of data..."))
+	})
+	server := httptest.NewServer(handler)
+	defer server.Close()
 
-	// Create a new HTTPGatherer instance with a custom timeout
-	gatherer := &HTTPGatherer{
-		Client: h.Client{
-			Timeout: 1 * time.Nanosecond,
-		},
-	}
+	g := NewHTTPGatherer()
+	tempDir := t.TempDir()
+	dest := filepath.Join(tempDir, "file.txt")
 
-	// Create a mock HTTP server
-	mockServer := httptest.NewServer(h.HandlerFunc(func(w h.ResponseWriter, r *h.Request) {
-		// Return a sample response
-		w.WriteHeader(h.StatusOK)
-		fmt.Fprint(w, "Hello, World!")
-	}))
-	defer mockServer.Close()
+	// Create a context and cancel it immediately
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
 
-	// Call the Gather method with the mock server URL and the temporary directory
-	_, err = gatherer.Gather(context.Background(), fmt.Sprintf("%s/foo", mockServer.URL), tempDir)
+	_, err := g.Gather(ctx, server.URL+"/slow-file", dest)
 	if err == nil {
-		t.Error("expected an error, but got nil")
+		t.Fatal("expected an error due to context cancellation, got nil")
 	}
-	assert.ErrorContains(t, err, "context deadline exceeded (Client.Timeout exceeded while awaiting headers)")
-}
-
-// TestHTTPGatherer_Gather_ClassifyURI_Error tests the Gather method with an error from ClassifyURI.
-func TestHTTPGatherer_Gather_ClassifyURI_Error(t *testing.T) {
-
-	mockServer := httptest.NewServer(h.HandlerFunc(func(w h.ResponseWriter, r *h.Request) {
-		w.WriteHeader(h.StatusOK)
-	}))
-	defer mockServer.Close()
-
-	// Create a new HTTPGatherer instance
-	gatherer := NewHTTPGatherer()
-
-	// Call the Gather method with an invalid destination URI
-	_, err := gatherer.Gather(context.Background(), fmt.Sprintf("%s/foo.bar", mockServer.URL), "foo://invalid-directory")
-	if err == nil {
-		t.Error("expected an error, but got nil")
+	if ctx.Err() == nil {
+		t.Errorf("expected context to be canceled, got nil")
 	}
-	assert.EqualError(t, err, "error determining destination type: unsupported protocol: foo")
 }
