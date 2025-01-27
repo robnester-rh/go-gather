@@ -128,6 +128,23 @@ func (o *OCIMetadata) GetDigest() string {
 	return o.Digest
 }
 
+func (o OCIMetadata) GetPinnedURL(u string) (string, error) {
+	if len(u) == 0 {
+		return "", fmt.Errorf("empty URL")
+	}
+	if o.Digest == "" {
+		return "", fmt.Errorf("image digest not set")
+	}
+	for _, scheme := range []string{"oci::", "oci://", "https://"} {
+		u = strings.TrimPrefix(u, scheme)
+	}
+	parts := strings.Split(u, "@")
+	if len(parts) > 1 {
+		u = parts[0]
+	}
+	return fmt.Sprintf("oci::%s@%s", u, o.Digest), nil
+}
+
 func ociURLParse(source string) string {
 	if strings.Contains(source, "::") {
 		source = strings.Split(source, "::")[1]
