@@ -158,6 +158,16 @@ func (h *HTTPMetadata) Get() interface{} {
 	return h
 }
 
+func (h HTTPMetadata) GetPinnedURL(u string) (string, error) {
+	if len(u) == 0 {
+		return "", fmt.Errorf("empty URL")
+	}
+	for _, scheme := range []string{"http://", "https://", "http::"} {
+		u = strings.TrimPrefix(u, scheme)
+	}
+	return "http::" + u, nil
+}
+
 func init() {
 	gather.RegisterGatherer(&HTTPGatherer{})
 }

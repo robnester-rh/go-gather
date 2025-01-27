@@ -145,6 +145,22 @@ func (g *GitMetadata) Get() interface{} {
 	return g
 }
 
+func (g GitMetadata) GetPinnedURL(u string) (string, error) {
+	if len(u) == 0 {
+		return "", fmt.Errorf("empty URL")
+	}
+	if g.LatestCommit == "" {
+		return "", fmt.Errorf("latest commit not set")
+	}
+	for _, scheme := range []string{"git::", "git://", "https://"} {
+		u = strings.TrimPrefix(u, scheme)
+	}
+	if strings.HasPrefix(u, "git@") {
+		u = strings.Replace(strings.Split(u, "git@")[1], ":", "/", 1)
+	}
+	return "git::" + strings.SplitN(u, "?ref=", 2)[0] + "?ref=" + g.LatestCommit, nil
+}
+
 // NewSSHAgentAuth returns an AuthMethod that uses the SSH agent for authentication.
 // It uses the specified user as the username for authentication.
 func (r *RealSSHAuthenticator) NewSSHAgentAuth(user string) (transport.AuthMethod, error) {

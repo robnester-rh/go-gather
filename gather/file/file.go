@@ -129,6 +129,16 @@ func (f *FSMetadata) Get() interface{} {
 	return f
 }
 
+func (f FSMetadata) GetPinnedURL(u string) (string, error) {
+	if len(u) == 0 {
+		return "", fmt.Errorf("empty file path")
+	}
+	for _, scheme := range []string{"file::", "file://"} {
+		u = strings.TrimPrefix(u, scheme)
+	}
+	return "file::" + u, nil
+}
+
 // save copies from a filesystem source to a filesystem destination.
 // If append is true, the file will be appended to the destination.
 func (f *FileSaver) save(ctx context.Context, source string, destination string, append bool) (metadata.Metadata, error) {
