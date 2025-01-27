@@ -18,4 +18,5 @@ package metadata
 
 type Metadata interface {
 	Get() interface{}
+	GetPinnedURL(string) (string, error)
 }
