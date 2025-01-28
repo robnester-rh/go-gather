@@ -19,6 +19,7 @@ package expand
 import (
 	"bytes"
 	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -77,11 +78,6 @@ func TestIsCompressedFile(t *testing.T) {
 		{
 			name:           "zip magic",
 			magic:          []byte{0x50, 0x4b, 0x03, 0x04},
-			wantCompressed: true,
-		},
-		{
-			name:           "tar magic",
-			magic:          []byte{0x75, 0x73, 0x74, 0x61, 0x72}, // "ustar"
 			wantCompressed: true,
 		},
 		{
@@ -160,5 +156,108 @@ func TestIsCompressedFile_EmptyFile(t *testing.T) {
 	}
 	if got {
 		t.Errorf("expected false for empty file, got true")
+	}
+}
+
+// TestIsTarFile checks that files with the "ustar" magic at offset 257 are recognized as tar.
+func TestIsTarFile(t *testing.T) {
+	tests := []struct {
+		name         string
+		offsetData   []byte // data written at offset 257
+		wantTar      bool
+		expectErr    bool
+	}{
+		{
+			name:       "valid tar magic with null",
+			offsetData: []byte("ustar\000"), // "ustar\0"
+			wantTar:    true,
+		},
+		{
+			name:       "valid tar magic with space",
+			offsetData: []byte("ustar "), // "ustar "
+			wantTar:    true,
+		},
+		{
+			name:       "invalid magic",
+			offsetData: []byte("xyz123"),
+			wantTar:    false,
+		},
+		{
+			name:       "not enough bytes",
+			offsetData: []byte("us"), // fewer than 6
+			wantTar:    false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			tmpFile, err := os.CreateTemp("", "test-tar-*")
+			if err != nil {
+				t.Fatalf("failed to create temp file: %v", err)
+			}
+			defer os.Remove(tmpFile.Name())
+			defer tmpFile.Close()
+
+			// Write 257 bytes of filler to ensure offset 257 is reached
+			if _, err := tmpFile.Write(bytes.Repeat([]byte{0xaa}, 257)); err != nil {
+				t.Fatalf("failed to write filler bytes: %v", err)
+			}
+			// Write the test's offsetData at position 257
+			if _, err := tmpFile.Write(tc.offsetData); err != nil {
+				t.Fatalf("failed to write magic bytes at offset 257: %v", err)
+			}
+
+			// Seek back to start for safety (not strictly necessary)
+			if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+				t.Fatalf("failed to seek temp file: %v", err)
+			}
+
+			gotTar, err := IsTarFile(tmpFile.Name())
+			if err != nil {
+				t.Fatalf("unexpected error from IsTarFile: %v", err)
+			}
+			if gotTar != tc.wantTar {
+				t.Errorf("IsTarFile(%q) = %v, want %v", tc.name, gotTar, tc.wantTar)
+			}
+		})
+	}
+}
+
+// TestIsTarFile_NonExistent checks that a non-existent file returns an error.
+func TestIsTarFile_NonExistent(t *testing.T) {
+	fakePath := filepath.Join(os.TempDir(), "no_such_file.tar")
+	gotTar, err := IsTarFile(fakePath)
+	if err == nil {
+		t.Fatal("expected an error when checking non-existent file, but got nil")
+	}
+	if gotTar {
+		t.Errorf("expected false for isTarFile, got true")
+	}
+}
+
+// TestIsTarFile_ShortFile checks that a file with fewer than 257 bytes returns false (no error).
+func TestIsTarFile_ShortFile(t *testing.T) {
+	tmpFile, err := os.CreateTemp("", "short-file-*")
+	if err != nil {
+		t.Fatalf("failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	defer tmpFile.Close()
+
+	// Write fewer than 257 bytes
+	if _, err := tmpFile.Write([]byte("abcd")); err != nil {
+		t.Fatalf("failed to write minimal data: %v", err)
+	}
+
+	if _, err := tmpFile.Seek(0, io.SeekStart); err != nil {
+		t.Fatalf("failed to seek temp file: %v", err)
+	}
+
+	gotTar, err := IsTarFile(tmpFile.Name())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if gotTar {
+		t.Errorf("expected false for short file, got true")
 	}
 }

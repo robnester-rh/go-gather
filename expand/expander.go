@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 )
 
@@ -52,7 +53,6 @@ func RegisterExpander(e Expander) {
 var magicNumbers = map[string][]byte{
 	"gzip":  {0x1f, 0x8b},
 	"zip":   {0x50, 0x4b, 0x03, 0x04},
-	"tar":   {0x75, 0x73, 0x74, 0x61, 0x72},
 	"bzip2": {0x42, 0x5a, 0x68},
 	"xz":    {0xfd, 0x37, 0x7a, 0x58, 0x5a, 0x00},
 	"7z":    {0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c},
@@ -80,6 +80,41 @@ func IsCompressedFile(filePath string) (bool, error) {
 		if len(header) >= len(magic) && bytes.Equal(header[:len(magic)], magic) {
 			return true, nil
 		}
+	}
+
+	return false, nil
+}
+
+// IsTarFile checks whether the file at filePath is a tar archive by reading
+// the standard tar magic bytes at offset 257 ("ustar\0" or "ustar ").
+func IsTarFile(filePath string) (bool, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return false, fmt.Errorf("could not open file: %w", err)
+	}
+	defer f.Close()
+
+	// Move to the position where the tar magic string should appear.
+	_, err = f.Seek(257, io.SeekStart)
+	if err != nil {
+		return false, fmt.Errorf("could not seek in file: %w", err)
+	}
+
+	// Read the 6 bytes of the magic string ("ustar\0" or "ustar ").
+	magic := make([]byte, 6)
+	n, err := f.Read(magic)
+	if err != nil && err != io.EOF {
+		return false, fmt.Errorf("could not read magic bytes: %w", err)
+	}
+
+	// If we didn't get enough bytes, it can't be a valid tar.
+	if n < 6 {
+		return false, nil
+	}
+
+	// Check if we have "ustar" at the start (POSIX tar magic).
+	if bytes.HasPrefix(magic, []byte("ustar")) {
+		return true, nil
 	}
 
 	return false, nil
