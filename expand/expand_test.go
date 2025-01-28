@@ -162,10 +162,10 @@ func TestIsCompressedFile_EmptyFile(t *testing.T) {
 // TestIsTarFile checks that files with the "ustar" magic at offset 257 are recognized as tar.
 func TestIsTarFile(t *testing.T) {
 	tests := []struct {
-		name         string
-		offsetData   []byte // data written at offset 257
-		wantTar      bool
-		expectErr    bool
+		name       string
+		offsetData []byte // data written at offset 257
+		wantTar    bool
+		expectErr  bool
 	}{
 		{
 			name:       "valid tar magic with null",

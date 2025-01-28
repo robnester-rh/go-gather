@@ -19,10 +19,13 @@ package git
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	giturls "github.com/chainguard-dev/git-urls"
 	"github.com/go-git/go-git/v5"
@@ -58,7 +61,7 @@ type SSHAuthenticator interface {
 type RealSSHAuthenticator struct{}
 
 func (g *GitGatherer) Matcher(uri string) bool {
-	terms := []string{"git@", "git://", "git::", ".git"}
+	terms := []string{"git@", "git://", "git::", ".git", "github.com", "gitlab.com", "bitbucket.org"}
 	for _, term := range terms {
 		if strings.Contains(uri, term) {
 			return true
@@ -73,22 +76,16 @@ func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Met
 		return nil, ctx.Err()
 	default:
 	}
-
+	// Process our provided source URL to get the source URL, ref, subdir, and depth
 	src, ref, subdir, depth, err := processUrl(src)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to process URL: %w", err)
 	}
 
+	// Initialize the clone options for the git repository
 	cloneOpts := &git.CloneOptions{
-		URL:      src,
-		Progress: nil,
-	}
-
-	// if we have a subdir, set no checkout to true and depth to 1
-	if subdir != "" {
-		cloneOpts.Depth = 1
-		cloneOpts.NoCheckout = true
+		URL:             src,
+		InsecureSkipTLS: os.Getenv("GIT_SSL_NO_VERIFY") == "true",
 	}
 
 	// If we have a ref and it isn't a hash, set the reference name in the clone options
@@ -103,42 +100,74 @@ func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Met
 		}
 	}
 
-	repo, err := git.PlainCloneContext(ctx, dst, false, cloneOpts)
-	if err != nil {
-		return nil, fmt.Errorf("failed to clone repository: %w", err)
+	// Initialize the git repository and worktree
+	r := &git.Repository{}
+	w := &git.Worktree{}
+
+	// tmpDir is used to clone the repository if a subdir is specified
+	var tmpDir string
+
+	if subdir != "" {
+		tmpDir, err = os.MkdirTemp("", "git-repo-")
+		if err != nil {
+			return nil, fmt.Errorf("error creating temporary directory: %w", err)
+		}
+		defer os.RemoveAll(tmpDir)
+
+		r, err = git.PlainCloneContext(ctx, tmpDir, false, cloneOpts)
+		if err != nil {
+			return nil, fmt.Errorf("error cloning repository: %w", err)
+		}
+	} else {
+		r, err = git.PlainCloneContext(ctx, dst, false, cloneOpts)
+		if err != nil {
+			return nil, fmt.Errorf("error cloning repository: %w", err)
+		}
 	}
 
-	head, err := repo.Head()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get repository head: %w", err)
+	if ref != "" {
+		h, err := r.ResolveRevision(plumbing.Revision(ref))
+		if err != nil {
+			return nil, fmt.Errorf("error resolving ref: %w", err)
+		}
+		w, err = r.Worktree()
+		if err != nil {
+			return nil, fmt.Errorf("error getting worktree: %w", err)
+		}
+		checkoutOpts := &git.CheckoutOptions{
+			Hash: *h,
+		}
+		err = w.Checkout(checkoutOpts)
+		if err != nil {
+			return nil, fmt.Errorf("error checking out ref: %w", err)
+		}
 	}
 
 	if subdir != "" {
-		w, err := repo.Worktree()
+		w, err = r.Worktree()
 		if err != nil {
-			return nil, fmt.Errorf("failed to get repository worktree: %w", err)
+			return nil, fmt.Errorf("error getting worktree: %w", err)
 		}
-		err = w.Checkout(&git.CheckoutOptions{
-			SparseCheckoutDirectories: []string{subdir},
-			Branch:                    plumbing.NewBranchReferenceName(head.Name().Short()),
-		})
+		_, err = w.Filesystem.Stat(subdir)
 		if err != nil {
-			return nil, fmt.Errorf("failed to checkout repository: %w", err)
+			return nil, fmt.Errorf("path %s does not exist in the repository", subdir)
+		}
+		path := filepath.Join(tmpDir, subdir)
+		err = copyDir(path, dst)
+		if err != nil {
+			return nil, fmt.Errorf("error copying directory: %w", err)
 		}
 	}
 
-	commit, err := repo.CommitObject(head.Hash())
+	head, err := r.Head()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get latest commit: %w", err)
+		return nil, fmt.Errorf("determining the HEAD reference: %w", err)
 	}
 
-	g.Path = dst
-	g.CommitHash = commit.Hash.String()
-	g.Author = commit.Author.Name
-	g.Timestamp = commit.Author.When.Format(time.RFC3339)
-	g.LatestCommit = commit.Hash.String()
-
-	return &g.GitMetadata, nil
+	m := &GitMetadata{
+		LatestCommit: head.Hash().String(),
+	}
+	return m, nil
 }
 
 func (g *GitMetadata) Get() interface{} {
@@ -167,6 +196,82 @@ func (r *RealSSHAuthenticator) NewSSHAgentAuth(user string) (transport.AuthMetho
 	return ssh.NewSSHAgentAuth(user)
 }
 
+// copyDir copies the contents of the src directory to dst directory
+func copyDir(src string, dst string) error {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
+
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return fmt.Errorf("error getting source directory info: %w", err)
+	}
+
+	if !srcInfo.IsDir() {
+		return fmt.Errorf("%s is not a directory", src)
+	}
+
+	_, err = os.Stat(dst)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(dst, srcInfo.Mode())
+			if err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			err = copyDir(srcPath, dstPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = copyFile(srcPath, dstPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// copyFile copies a file from src to dst
+func copyFile(src string, dst string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer dstFile.Close()
+
+	_, err = io.Copy(dstFile, srcFile)
+	if err != nil {
+		return err
+	}
+
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	return os.Chmod(dst, srcInfo.Mode())
+}
+
 // extractKeyFromQuery extracts the value of the specified key from the query parameters and extracts a subdir, if present.
 func extractKeyFromQuery(q url.Values, key string, subdir *string) string {
 	value := q.Get(key)
@@ -181,12 +286,21 @@ func extractKeyFromQuery(q url.Values, key string, subdir *string) string {
 }
 
 func processUrl(rawSource string) (src, ref, subdir, depth string, err error) {
-	for _, prefix := range []string{"git://", "git::"} {
+	// Remove any prefixes we normally see from the source URL.
+	terms := []string{"git@", "git://", "git::", "https://", "file://", "file::"}
+	for _, prefix := range terms{
 		rawSource = strings.TrimPrefix(rawSource, prefix)
 	}
 	src = rawSource
 
-	if !strings.HasPrefix(src, "git@") {
+	// Regular expression for file paths
+	filePathPattern := regexp.MustCompile(`^(\./|\../|/|[a-zA-Z]:\\|~\/).*`)
+
+	if filePathPattern.MatchString(src) {
+		src = "file://" + src
+	}
+
+	if !strings.HasPrefix(src, "git@") && !strings.HasPrefix(src, "file://") {
 		src = "https://" + src
 	}
 
@@ -215,7 +329,7 @@ func processUrl(rawSource string) (src, ref, subdir, depth string, err error) {
 	}
 
 	// If the path does not end with ".git", append it
-	if !strings.HasSuffix(u.Path, ".git") {
+	if !strings.HasSuffix(u.Path, ".git") && !strings.HasPrefix(src, "file://") {
 		u.Path += ".git"
 	}
 
