@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -117,7 +118,8 @@ func (o *OCIGatherer) Matcher(uri string) bool {
 			return true
 		}
 	}
-	return false
+	// Check if the input matches any known OCI registry
+	return containsOCIRegistry(uri)
 }
 
 func (o *OCIMetadata) Get() interface{} {
@@ -143,6 +145,27 @@ func (o OCIMetadata) GetPinnedURL(u string) (string, error) {
 		u = parts[0]
 	}
 	return fmt.Sprintf("oci::%s@%s", u, o.Digest), nil
+}
+
+// containsOCIRegistry checks if the input string contains a known OCI registry
+func containsOCIRegistry(src string) bool {
+	matchRegistries := []*regexp.Regexp{
+		regexp.MustCompile("azurecr.io"),
+		regexp.MustCompile("gcr.io"),
+		regexp.MustCompile("registry.gitlab.com"),
+		regexp.MustCompile("pkg.dev"),
+		regexp.MustCompile("[0-9]{12}.dkr.ecr.[a-z0-9-]*.amazonaws.com"),
+		regexp.MustCompile("^quay.io"),
+		regexp.MustCompile(`(?:::1|127\.0\.0\.1|(?i:localhost)):\d{1,5}`), // localhost OCI registry
+	}
+
+	for _, matchRegistry := range matchRegistries {
+		if matchRegistry.MatchString(src) {
+			return true
+		}
+	}
+	return false
+
 }
 
 func ociURLParse(source string) string {

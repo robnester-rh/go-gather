@@ -36,6 +36,7 @@ type FileGatherer struct {
 }
 
 type FSMetadata struct {
+	URI       string
 	Path      string
 	Size      int64
 	Timestamp string
@@ -101,7 +102,13 @@ func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Me
 	if err != nil {
 		return nil, err
 	}
-	if compressedFile {
+
+	isTarFile, err := expand.IsTarFile(src)
+	if err != nil {
+		return nil, err
+	}
+
+	if compressedFile || isTarFile {
 		e, err := getExpander(src)
 		if err != nil {
 			return nil, err

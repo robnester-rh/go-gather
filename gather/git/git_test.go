@@ -41,7 +41,7 @@ func TestGitGatherer_Matcher(t *testing.T) {
 		{"git protocol double colon", "git::github.com/org/repo", true},
 		{"git protocol slash slash", "git://github.com/org/repo.git", true},
 		{"dot git suffix", "https://github.com/org/repo.git", true},
-		{"no matches", "https://github.com/org/repo", false},
+		{"match github.com", "github.com/org/repo", true},
 		{"other prefix", "svn://some/repo", false},
 	}
 
@@ -84,8 +84,8 @@ func TestGitGatherer_Gather_InvalidRef(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid ref, got nil")
 	}
-	if !strings.Contains(err.Error(), "failed to clone repository") {
-		t.Errorf("expected 'failed to clone repository' error, got %v", err)
+	if !strings.Contains(err.Error(), "error cloning repository: reference not found") {
+		t.Errorf("expected 'error cloning repository: reference not found' error, got %v", err)
 	}
 }
 
