@@ -288,7 +288,7 @@ func extractKeyFromQuery(q url.Values, key string, subdir *string) string {
 func processUrl(rawSource string) (src, ref, subdir, depth string, err error) {
 	// Remove any prefixes we normally see from the source URL.
 	terms := []string{"git@", "git://", "git::", "https://", "file://", "file::"}
-	for _, prefix := range terms{
+	for _, prefix := range terms {
 		rawSource = strings.TrimPrefix(rawSource, prefix)
 	}
 	src = rawSource
