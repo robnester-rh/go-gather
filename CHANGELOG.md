@@ -1,3 +1,9 @@
+## [0.1.0](https://github.com/enterprise-contract/go-gather/compare/v0.0.8...v0.1.0) (2025-02-03)
+
+### Features
+
+* **detector:** Add new Detector functionality. ([5b89b1d](https://github.com/enterprise-contract/go-gather/commit/5b89b1d25470f5545496aa3965c2a3c69c62992a))
+
 ## [0.0.8](https://github.com/enterprise-contract/go-gather/compare/v0.0.7...v0.0.8) (2025-02-03)
 
 ### Bug Fixes
