@@ -42,6 +42,7 @@ func TestGitGatherer_Matcher(t *testing.T) {
 		{"git protocol slash slash", "git://github.com/org/repo.git", true},
 		{"dot git suffix", "https://github.com/org/repo.git", true},
 		{"match github.com", "github.com/org/repo", true},
+		{"not match githubusercontent.com", "https://raw.githubusercontent.com/foo/bar", false},
 		{"other prefix", "svn://some/repo", false},
 	}
 

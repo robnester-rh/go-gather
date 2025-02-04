@@ -147,7 +147,7 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (metad
 func (h *HTTPGatherer) Matcher(uri string) bool {
 	prefixes := []string{"http://", "https://"}
 	for _, prefix := range prefixes {
-		if strings.HasPrefix(uri, prefix) && !(strings.Contains(uri, "github") || strings.Contains(uri, "gitlab") || strings.Contains(uri, "bitbucket")) {
+		if strings.HasPrefix(uri, prefix) && !(strings.Contains(uri, "github.com") || strings.Contains(uri, "gitlab.com") || strings.Contains(uri, "bitbucket.com")) {
 			return true
 		}
 	}
