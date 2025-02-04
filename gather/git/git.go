@@ -61,13 +61,20 @@ type SSHAuthenticator interface {
 type RealSSHAuthenticator struct{}
 
 func (g *GitGatherer) Matcher(uri string) bool {
-	terms := []string{"git@", "git://", "git::", ".git", "github.com", "gitlab.com", "bitbucket.org"}
-	for _, term := range terms {
+	prefixes := []string{"git@", "git://", "git::"}
+	for _, term := range prefixes {
+		if strings.HasPrefix(uri, term) {
+			return true
+		}
+	}
+
+	for _, term := range []string{"github.com", "gitlab.com", "bitbucket.org"} {
 		if strings.Contains(uri, term) {
 			return true
 		}
 	}
-	return false
+
+	return strings.HasSuffix(uri, ".git")
 }
 
 func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Metadata, error) {
