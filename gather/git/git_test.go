@@ -40,6 +40,7 @@ func TestGitGatherer_Matcher(t *testing.T) {
 		{"git@ domain", "git@github.com:org/repo.git", true},
 		{"git protocol double colon", "git::github.com/org/repo", true},
 		{"git protocol slash slash", "git://github.com/org/repo.git", true},
+		{"unknown protocol double colon", "s3::github.com/org/repo", false},
 		{"dot git suffix", "https://github.com/org/repo.git", true},
 		{"match github.com", "github.com/org/repo", true},
 		{"not match githubusercontent.com", "https://raw.githubusercontent.com/foo/bar", false},

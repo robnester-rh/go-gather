@@ -68,6 +68,12 @@ func (g *GitGatherer) Matcher(uri string) bool {
 		}
 	}
 
+	// check if we have any magic prefixes (::) in the URL
+	// If we do, we don't want to match it as a git URL.
+	if strings.Contains(uri, "::") {
+		return false
+	}
+
 	for _, term := range []string{"github.com", "gitlab.com", "bitbucket.org"} {
 		if strings.Contains(uri, term) {
 			return true
