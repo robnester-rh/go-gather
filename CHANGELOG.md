@@ -1,3 +1,9 @@
+## [0.1.1](https://github.com/enterprise-contract/go-gather/compare/v0.1.0...v0.1.1) (2025-02-05)
+
+### Bug Fixes
+
+* **detector-tests:** Fixed detector tests. ([00ac820](https://github.com/enterprise-contract/go-gather/commit/00ac820fcfebad39bf4c93ddf71e5c32cc954a6e))
+
 ## [0.1.0](https://github.com/enterprise-contract/go-gather/compare/v0.0.8...v0.1.0) (2025-02-03)
 
 ### Features
