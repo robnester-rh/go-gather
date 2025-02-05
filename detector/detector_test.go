@@ -90,6 +90,11 @@ func TestGitDetector(t *testing.T) {
 			expected: true,
 		},
 		{
+			name:     "Shouldn't match githubusercontent.com",
+			uri:      "https://raw.githubusercontent.com/foo/bar",
+			expected: false,
+		},
+		{
 			name:     "valid git:: URI",
 			uri:      "git::example.com/enterprise-contract/go-gather",
 			expected: true,
@@ -158,6 +163,11 @@ func TestHttpDetector(t *testing.T) {
 			name:     "git URI should not match as HTTP",
 			uri:      "git@github.com:enterprise-contract/go-gather.git",
 			expected: false,
+		},
+		{
+			name:     "https://raw.githubusercontent.com should match as HTTP",
+			uri:      "https://raw.githubusercontent.com/foo/bar",
+			expected: true,
 		},
 		{
 			name:     "OCI URI should not match as HTTP",
