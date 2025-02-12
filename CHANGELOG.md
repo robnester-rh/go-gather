@@ -1,3 +1,17 @@
+## [1.0.0](https://github.com/conforma/go-gather/compare/v0.1.2...v1.0.0) (2025-02-12)
+
+### ⚠ BREAKING CHANGES
+
+* **go-modules:** Users must update import paths and dependencies to the
+new module path. Run `go get github.com/conforma/go-gather@latest` and
+`go mod tidy` to resolve.
+
+Signed-off-by: Rob Nester <rnester@redhat.com>
+
+### Bug Fixes
+
+* **go-modules:** update module path ([1d67df5](https://github.com/conforma/go-gather/commit/1d67df53a1c8560e9607e4a898c8e268161c87a1))
+
 ## [0.1.1](https://github.com/conforma/go-gather/compare/v0.1.0...v0.1.1) (2025-02-05)
 
 ### Bug Fixes
