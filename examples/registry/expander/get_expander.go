@@ -19,7 +19,7 @@ package main
 import (
 	"reflect"
 
-	"github.com/enterprise-contract/go-gather/registry"
+	"github.com/conforma/go-gather/registry"
 )
 
 func main() {

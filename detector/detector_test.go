@@ -81,7 +81,7 @@ func TestGitDetector(t *testing.T) {
 		},
 		{
 			name:     "valid git HTTPS URI",
-			uri:      "https://github.com/enterprise-contract/go-gather.git",
+			uri:      "https://github.com/conforma/go-gather.git",
 			expected: true,
 		},
 		{

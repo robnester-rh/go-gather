@@ -1,4 +1,4 @@
-module github.com/enterprise-contract/go-gather
+module github.com/conforma/go-gather
 
 go 1.22.7
 

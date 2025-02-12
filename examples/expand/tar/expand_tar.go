@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	tarExpander "github.com/enterprise-contract/go-gather/expand/tar"
+	tarExpander "github.com/conforma/go-gather/expand/tar"
 )
 
 func main() {

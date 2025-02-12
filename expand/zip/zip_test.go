@@ -25,7 +25,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	customzip "github.com/enterprise-contract/go-gather/expand/zip"
+	customzip "github.com/conforma/go-gather/expand/zip"
 )
 
 // TestZipExpander_Matcher verifies that the Matcher function correctly identifies .zip files.

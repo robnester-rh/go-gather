@@ -22,7 +22,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/enterprise-contract/go-gather/expand/bzip2"
+	"github.com/conforma/go-gather/expand/bzip2"
 )
 
 func main() {

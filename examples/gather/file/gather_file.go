@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/enterprise-contract/go-gather/gather/file"
+	"github.com/conforma/go-gather/gather/file"
 )
 
 

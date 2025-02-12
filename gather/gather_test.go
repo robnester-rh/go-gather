@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/enterprise-contract/go-gather/metadata"
+	"github.com/conforma/go-gather/metadata"
 )
 
 type TestGatherer struct{}

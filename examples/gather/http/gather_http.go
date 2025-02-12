@@ -20,7 +20,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/enterprise-contract/go-gather/gather/http"
+	"github.com/conforma/go-gather/gather/http"
 )
 
 func main(){

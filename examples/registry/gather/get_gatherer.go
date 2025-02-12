@@ -19,7 +19,7 @@ package main
 import (
 	"reflect"
 
-	"github.com/enterprise-contract/go-gather/registry"
+	"github.com/conforma/go-gather/registry"
 )
 
 func main(){
@@ -29,7 +29,7 @@ func main(){
 	//-------------------------------------------------------------------------
 
 	// Set the source URL to the file
-	srcs := []string{"file:///tmp/test.bz2", "https://www.google.com/index.html", "git://github.com/enterprise-contract/go-gather.git", "oci::quay.io/konflux-ci/tekton-catalog/task-buildah-remote-oci-ta:0.3"}
+	srcs := []string{"file:///tmp/test.bz2", "https://www.google.com/index.html", "git://github.com/conforma/go-gather.git", "oci::quay.io/konflux-ci/tekton-catalog/task-buildah-remote-oci-ta:0.3"}
 
 	for _, src := range srcs {
 		// Get the gatherer for the given source URL

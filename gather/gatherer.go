@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/enterprise-contract/go-gather/metadata"
+	"github.com/conforma/go-gather/metadata"
 )
 
 type Gatherer interface {

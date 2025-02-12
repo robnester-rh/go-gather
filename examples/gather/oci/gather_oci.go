@@ -20,7 +20,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/enterprise-contract/go-gather/gather/oci"
+	"github.com/conforma/go-gather/gather/oci"
 )
 
 func main() {

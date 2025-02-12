@@ -27,9 +27,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/enterprise-contract/go-gather/gather"
-	"github.com/enterprise-contract/go-gather/internal/helpers"
-	"github.com/enterprise-contract/go-gather/metadata"
+	"github.com/conforma/go-gather/gather"
+	"github.com/conforma/go-gather/internal/helpers"
+	"github.com/conforma/go-gather/metadata"
 )
 
 var Transport http.RoundTripper = http.DefaultTransport
