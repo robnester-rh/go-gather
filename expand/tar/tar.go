@@ -29,8 +29,8 @@ import (
 
 	"github.com/google/safearchive/tar"
 
-	"github.com/enterprise-contract/go-gather/expand"
-	"github.com/enterprise-contract/go-gather/internal/helpers"
+	"github.com/conforma/go-gather/expand"
+	"github.com/conforma/go-gather/internal/helpers"
 )
 
 var (

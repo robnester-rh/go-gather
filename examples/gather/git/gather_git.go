@@ -20,7 +20,7 @@ import (
 	"context"
 	"os"
 
-	"github.com/enterprise-contract/go-gather/gather/git"
+	"github.com/conforma/go-gather/gather/git"
 )
 
 func main() {
@@ -30,7 +30,7 @@ func main() {
 	// -------------------------------------------------------------------------
 
 	// Set the source URL to the git repository
-	gitSrc := "git://github.com/enterprise-contract/go-gather.git"
+	gitSrc := "git://github.com/conforma/go-gather.git"
 
 	// Create a temporary directory to act as our destination directory
 	dst, err := os.MkdirTemp("", "git_gather_example_dst_")

@@ -33,8 +33,8 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
-	"github.com/enterprise-contract/go-gather/gather"
-	"github.com/enterprise-contract/go-gather/metadata"
+	"github.com/conforma/go-gather/gather"
+	"github.com/conforma/go-gather/metadata"
 )
 
 type GitGatherer struct {

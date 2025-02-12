@@ -30,9 +30,9 @@ import (
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
 
-	"github.com/enterprise-contract/go-gather/gather"
-	r "github.com/enterprise-contract/go-gather/internal/oci/registry"
-	"github.com/enterprise-contract/go-gather/metadata"
+	"github.com/conforma/go-gather/gather"
+	r "github.com/conforma/go-gather/internal/oci/registry"
+	"github.com/conforma/go-gather/metadata"
 )
 
 type OCIGatherer struct {

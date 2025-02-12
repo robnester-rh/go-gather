@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/enterprise-contract/go-gather/internal/helpers"
+	"github.com/conforma/go-gather/internal/helpers"
 )
 
 // helloBzip2Fixture is a small bzip2-encoded byte slice that decompresses to "Hello Bzip2!".

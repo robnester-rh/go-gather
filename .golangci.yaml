@@ -33,4 +33,4 @@ linters-settings:
     sections:
       - standard
       - default
-      - prefix(github.com/enterprise-contract/go-gather)
+      - prefix(github.com/conforma/go-gather)

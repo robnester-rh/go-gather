@@ -14,7 +14,7 @@ go-gather is based heavily on [go-getter](https://github.com/hashicorp/go-getter
 
 Installation can be done with a normal go get:
 ```
-$ go get github.com/enterprise-contract/go-gather
+$ go get github.com/conforma/go-gather
 ```
 
 ## Security

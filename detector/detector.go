@@ -17,10 +17,10 @@
 package detector
 
 import (
-	"github.com/enterprise-contract/go-gather/gather/file"
-	"github.com/enterprise-contract/go-gather/gather/git"
-	"github.com/enterprise-contract/go-gather/gather/http"
-	"github.com/enterprise-contract/go-gather/gather/oci"
+	"github.com/conforma/go-gather/gather/file"
+	"github.com/conforma/go-gather/gather/git"
+	"github.com/conforma/go-gather/gather/http"
+	"github.com/conforma/go-gather/gather/oci"
 )
 
 // FileDetector checks if the URI is a file path.

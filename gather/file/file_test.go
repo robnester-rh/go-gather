@@ -26,8 +26,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/enterprise-contract/go-gather/expand"
-	_ "github.com/enterprise-contract/go-gather/expand/zip" // Register zip expander
+	"github.com/conforma/go-gather/expand"
+	_ "github.com/conforma/go-gather/expand/zip" // Register zip expander
 )
 
 func TestFileGatherer_Matcher(t *testing.T) {
