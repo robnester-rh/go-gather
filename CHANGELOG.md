@@ -1,3 +1,9 @@
+## [1.0.1](https://github.com/conforma/go-gather/compare/v1.0.0...v1.0.1) (2025-02-27)
+
+### Bug Fixes
+
+* update Matcher() function in `gather/file` ([4fde473](https://github.com/conforma/go-gather/commit/4fde473f7dc657aec64d7145b82f5c5d48912d8d))
+
 ## [1.0.0](https://github.com/conforma/go-gather/compare/v0.1.2...v1.0.0) (2025-02-12)
 
 ### ⚠ BREAKING CHANGES
