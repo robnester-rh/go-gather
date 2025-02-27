@@ -33,6 +33,12 @@ import (
 func TestFileGatherer_Matcher(t *testing.T) {
 	fg := &FileGatherer{}
 
+	// create a temporary file for testing relative paths
+	if _, err := os.Create("myTempFile"); err != nil {
+		t.Fatalf("failed to create temporary file: %v", err)
+	}
+	defer os.Remove("myTempFile")
+
 	tests := []struct {
 		name string
 		uri  string
@@ -43,6 +49,8 @@ func TestFileGatherer_Matcher(t *testing.T) {
 		{"absolute path", "/etc/hosts", true},
 		{"relative path dot", "./myfile", true},
 		{"relative path dotdot", "../myfile", true},
+		{"relative path with no dot", "myTempFile", true},
+		{"relative path with no dot that doesn't exist", "myOtherTempFile", false},
 		{"no match", "http://example.com/file.txt", false},
 	}
 
