@@ -53,7 +53,18 @@ func (f *FileGatherer) Matcher(uri string) bool {
 			return true
 		}
 	}
-	return false
+
+	// Return true if the URI is a file path relative to the current working directory.
+	_, err := os.Stat(uri)
+    if err == nil {
+        return true
+    }
+    if os.IsNotExist(err) {
+        return false // file does not exist, so it is not a file path.
+    }
+    // If we reach here, the error is due to something else (e.g., permission error).
+	fmt.Printf("Error: %v\n", err)
+    return false
 }
 
 func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Metadata, error) {
