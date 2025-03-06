@@ -177,13 +177,13 @@ func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Met
 		return nil, fmt.Errorf("determining the HEAD reference: %w", err)
 	}
 
-	m := &GitMetadata{
+	m := GitMetadata{
 		LatestCommit: head.Hash().String(),
 	}
 	return m, nil
 }
 
-func (g *GitMetadata) Get() interface{} {
+func (g GitMetadata) Get() interface{} {
 	return g
 }
 

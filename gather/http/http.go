@@ -141,7 +141,7 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (metad
 	h.Size = bytesWritten
 	h.Timestamp = time.Now().Format(time.RFC3339)
 
-	return &h.HTTPMetadata, nil
+	return h.HTTPMetadata, nil
 }
 
 func (h *HTTPGatherer) Matcher(uri string) bool {
@@ -154,7 +154,7 @@ func (h *HTTPGatherer) Matcher(uri string) bool {
 	return false
 }
 
-func (h *HTTPMetadata) Get() interface{} {
+func (h HTTPMetadata) Get() interface{} {
 	return h
 }
 

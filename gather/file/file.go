@@ -143,7 +143,7 @@ func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Me
 	return fsaver.save(ctx, src, dst, false)
 }
 
-func (f *FSMetadata) Get() interface{} {
+func (f FSMetadata) Get() interface{} {
 	return f
 }
 
@@ -207,7 +207,7 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 	f.Size = writtenSize
 	f.Timestamp = time.Now().Format(time.RFC3339)
 
-	return &f.FSMetadata, nil
+	return f.FSMetadata, nil
 }
 
 func getExpander(src string) (expand.Expander, error) {
