@@ -1,3 +1,9 @@
+## [1.0.2](https://github.com/conforma/go-gather/compare/v1.0.1...v1.0.2) (2025-03-06)
+
+### Bug Fixes
+
+* **metadata:** fix returns  on `Gather()` methods ([8675a30](https://github.com/conforma/go-gather/commit/8675a3085a3c1b546978cc7de7e99cecb876aeed))
+
 ## [1.0.1](https://github.com/conforma/go-gather/compare/v1.0.0...v1.0.1) (2025-02-27)
 
 ### Bug Fixes
