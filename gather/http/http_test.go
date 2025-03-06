@@ -78,7 +78,7 @@ func TestHTTPGatherer_Gather_Success(t *testing.T) {
 		t.Errorf("expected content %q, got %q", testData, string(fileContent))
 	}
 
-	httpMeta, ok := meta.(*HTTPMetadata)
+	httpMeta, ok := meta.(HTTPMetadata)
 	if !ok {
 		t.Fatalf("expected *HTTPMetadata, got %T", meta)
 	}
@@ -174,7 +174,7 @@ func TestHTTPGatherer_Gather_EmptyDirDestination(t *testing.T) {
 		t.Fatalf("Gather returned error: %v", err)
 	}
 
-	httpMeta := meta.(*HTTPMetadata)
+	httpMeta := meta.(HTTPMetadata)
 	expectedPath := filepath.Join(dest, "download-me.bin")
 	if httpMeta.Path != expectedPath {
 		t.Errorf("expected path=%s, got %s", expectedPath, httpMeta.Path)

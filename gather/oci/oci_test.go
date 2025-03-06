@@ -87,7 +87,7 @@ func TestOCIGatherer_Gather_Success(t *testing.T) {
 		t.Fatalf("Gather returned an error: %v", err)
 	}
 
-	ociMeta, ok := meta.(*OCIMetadata)
+	ociMeta, ok := meta.(OCIMetadata)
 	if !ok {
 		t.Fatalf("expected *OCIMetadata, got %T", meta)
 	}
@@ -247,7 +247,7 @@ func pushTestArtifact(m *memory.Store, finalRef string, data []byte) error {
 
 // Optional TestOCIMetadata_Get to show retrieving the raw metadata structure
 func TestOCIMetadata_Get(t *testing.T) {
-	o := &OCIMetadata{
+	o := OCIMetadata{
 		Path:      "/tmp/some/path",
 		Digest:    "sha256:123abc",
 		Timestamp: time.Now().Format(time.RFC3339),
