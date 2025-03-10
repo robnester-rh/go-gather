@@ -1,13 +1,17 @@
 name: Release Go-Gather
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Checks"]
+    types:
+      - completed
     branches:
-      - main # Trigger on pushes to the main branch
+      - main
   workflow_dispatch:
 
 jobs:
   release:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }} # Only run if "Checks" succeeded
     runs-on: ubuntu-latest
 
     steps:
