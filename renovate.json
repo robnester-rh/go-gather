@@ -1,6 +1,32 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended"
+    "config:recommended",
+    ":gitSignOff",
+    ":disableDependencyDashboard"
+  ],
+  "ignorePresets": [
+    ":dependencyDashboard"
+  ],
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
+  "timezone": "American/New_York",
+  "schedule": ["0-59 7-15 * * 1-5"],
+  "baseBranches": ["main"],
+  "packageRules": [
+    { "matchManagers": ["gomod"], 
+      "matchDepNames": ["go"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchPaths": ["/"],
+      "groupName": "gomod / Updates"
+    },
+    {
+      "matchManagers": ["pre-commit"],
+      "groupName": "Pre-commit Updates"
+    }
   ]
 }
