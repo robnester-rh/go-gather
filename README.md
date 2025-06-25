@@ -8,7 +8,7 @@ go-gather is a library for Go (golang) for downloading ("gathering") from variou
 
 go-gather simplifies the process of gathering from these sources by freeing the implementer from having to be concerned about the details of the sources.
 
-go-gather is based heavily on [go-getter](https://github.com/hashicorp/go-getter), but designed for specific requirements by the [ec-cli](https://github.com/enterprise-contract/ec-cli) project.
+go-gather is based heavily on [go-getter](https://github.com/hashicorp/go-getter), but designed for specific requirements by [ec](https://github.com/conforma/cli) project.
 
 ## Installation and Use
 
