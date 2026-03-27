@@ -62,7 +62,7 @@ var ociRegistryPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?:::1|127\.0\.0\.1|(?i:localhost)):\d{1,5}`), // localhost OCI registry
 }
 
-func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.Metadata, error) {
+func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (_ metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -109,7 +109,11 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.
 	if err != nil {
 		return nil, fmt.Errorf("file store: %w", err)
 	}
-	defer fileStore.Close()
+	defer func() {
+		if cerr := fileStore.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	// Copy the artifact to the file store
 	a, err := orasCopy(ctx, src, repo, fileStore, "", oras.DefaultCopyOptions)

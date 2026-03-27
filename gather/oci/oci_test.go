@@ -87,7 +87,7 @@ func TestOCIGatherer_Gather_Success(t *testing.T) {
 		t.Fatalf("Gather returned an error: %v", err)
 	}
 
-	ociMeta, ok := meta.(OCIMetadata)
+	ociMeta, ok := meta.(*OCIMetadata)
 	if !ok {
 		t.Fatalf("expected *OCIMetadata, got %T", meta)
 	}

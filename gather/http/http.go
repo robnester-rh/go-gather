@@ -53,7 +53,7 @@ func NewHTTPGatherer() *HTTPGatherer {
 	}
 }
 
-func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (metadata.Metadata, error) {
+func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (_ metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -128,7 +128,11 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (metad
 	if err != nil {
 		return nil, fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() {
+		if cerr := outFile.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	bytesWritten, err := io.Copy(outFile, resp.Body)
 	if err != nil {

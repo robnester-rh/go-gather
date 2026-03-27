@@ -158,7 +158,7 @@ func (f FSMetadata) GetPinnedURL(u string) (string, error) {
 
 // save copies from a filesystem source to a filesystem destination.
 // If append is true, the file will be appended to the destination.
-func (f *FileSaver) save(ctx context.Context, source string, destination string, append bool) (metadata.Metadata, error) {
+func (f *FileSaver) save(ctx context.Context, source string, destination string, append bool) (meta metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -166,7 +166,6 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 	}
 
 	var dstFile *os.File
-	var err error
 
 	src, err := url.Parse(source)
 	if err != nil {
@@ -190,7 +189,11 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file: %w", err)
 	}
-	defer dstFile.Close()
+	defer func() {
+		if cerr := dstFile.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	srcFile, err := os.Open(src.Path)
 	if err != nil {
