@@ -28,7 +28,7 @@ import (
 	"github.com/conforma/go-gather/internal/oci/network"
 )
 
-/* This code is sourced from the open-policy-agent/conftest project. */
+/* Originally sourced from the open-policy-agent/conftest project, adapted for go-gather. */
 
 func SetupClient(repository *remote.Repository, transport http.RoundTripper) error {
 	registry := repository.Reference.Host()
