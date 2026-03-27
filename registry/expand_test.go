@@ -23,6 +23,7 @@ import (
 )
 
 func TestGetExpanderTar(t *testing.T) {
+	t.Parallel()
 	e := registry.GetExpander("tar")
 	if e == nil {
 		t.Fatal("expected non-nil tar expander")
@@ -30,6 +31,7 @@ func TestGetExpanderTar(t *testing.T) {
 }
 
 func TestGetExpanderZip(t *testing.T) {
+	t.Parallel()
 	e := registry.GetExpander("zip")
 	if e == nil {
 		t.Fatal("expected non-nil zip expander")
@@ -37,6 +39,7 @@ func TestGetExpanderZip(t *testing.T) {
 }
 
 func TestGetExpanderBzip2(t *testing.T) {
+	t.Parallel()
 	e := registry.GetExpander("bzip2")
 	if e == nil {
 		t.Fatal("expected non-nil bzip2 expander")
@@ -44,6 +47,7 @@ func TestGetExpanderBzip2(t *testing.T) {
 }
 
 func TestGetExpanderUnknown(t *testing.T) {
+	t.Parallel()
 	e := registry.GetExpander("unknown")
 	if e != nil {
 		t.Fatal("expected nil for unknown expander")

@@ -33,6 +33,7 @@ import (
 )
 
 func TestOCIGatherer_Matcher(t *testing.T) {
+	t.Parallel()
 	g := &OCIGatherer{}
 
 	tests := []struct {
@@ -47,7 +48,9 @@ func TestOCIGatherer_Matcher(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := g.Matcher(tc.uri)
 			if got != tc.want {
 				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)
@@ -57,6 +60,7 @@ func TestOCIGatherer_Matcher(t *testing.T) {
 }
 
 func TestMatcherOCIRegistries(t *testing.T) {
+	t.Parallel()
 	g := &OCIGatherer{}
 	tests := []struct {
 		name string
@@ -76,7 +80,9 @@ func TestMatcherOCIRegistries(t *testing.T) {
 		{"plain text", "hello world", false},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			if got := g.Matcher(tt.uri); got != tt.want {
 				t.Errorf("Matcher(%q) = %v, want %v", tt.uri, got, tt.want)
 			}
@@ -198,6 +204,7 @@ func TestOCIGatherer_Gather_CreateDirError(t *testing.T) {
 }
 
 func TestOCIGatherer_ociURLParse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		source string
@@ -209,7 +216,9 @@ func TestOCIGatherer_ociURLParse(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := ociURLParse(tc.source)
 			if got != tc.want {
 				t.Errorf("ociURLParse(%q) = %q, want %q", tc.source, got, tc.want)
@@ -231,7 +240,9 @@ func TestOCIGatherer_Gather_ReplaceLocalhost(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, _ = g.Gather(ctx, "oci://localhost:5000/myrepo", t.TempDir())
+	if _, err := g.Gather(ctx, "oci://localhost:5000/myrepo", t.TempDir()); err != nil {
+		t.Fatalf("Gather: %v", err)
+	}
 
 	// Expect the final reference to have "127.0.0.1"
 	if !strings.Contains(gotRef, "127.0.0.1") {
@@ -275,6 +286,7 @@ func pushTestArtifact(m *memory.Store, finalRef string, data []byte) error {
 
 // Optional TestOCIMetadata_Get to show retrieving the raw metadata structure
 func TestOCIMetadata_Get(t *testing.T) {
+	t.Parallel()
 	o := OCIMetadata{
 		Path:      "/tmp/some/path",
 		Digest:    "sha256:123abc",
@@ -289,6 +301,7 @@ func TestOCIMetadata_Get(t *testing.T) {
 
 // Optional TestOCIMetadata_GetDigest ensures the Digest is returned properly
 func TestOCIMetadata_GetDigest(t *testing.T) {
+	t.Parallel()
 	o := &OCIMetadata{
 		Digest: "sha256:123abc",
 	}

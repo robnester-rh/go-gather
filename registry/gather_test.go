@@ -23,6 +23,7 @@ import (
 )
 
 func TestGetGathererForFile(t *testing.T) {
+	t.Parallel()
 	g, err := registry.GetGatherer("file:///tmp/test")
 	if err != nil {
 		t.Fatalf("expected gatherer for file URI, got error: %v", err)
@@ -33,6 +34,7 @@ func TestGetGathererForFile(t *testing.T) {
 }
 
 func TestGetGathererForGit(t *testing.T) {
+	t.Parallel()
 	g, err := registry.GetGatherer("git::https://github.com/example/repo")
 	if err != nil {
 		t.Fatalf("expected gatherer for git URI, got error: %v", err)
@@ -43,6 +45,7 @@ func TestGetGathererForGit(t *testing.T) {
 }
 
 func TestGetGathererForHTTP(t *testing.T) {
+	t.Parallel()
 	g, err := registry.GetGatherer("https://example.com/file.txt")
 	if err != nil {
 		t.Fatalf("expected gatherer for HTTP URI, got error: %v", err)
@@ -53,6 +56,7 @@ func TestGetGathererForHTTP(t *testing.T) {
 }
 
 func TestGetGathererForOCI(t *testing.T) {
+	t.Parallel()
 	g, err := registry.GetGatherer("oci://quay.io/example/image:latest")
 	if err != nil {
 		t.Fatalf("expected gatherer for OCI URI, got error: %v", err)
@@ -63,6 +67,7 @@ func TestGetGathererForOCI(t *testing.T) {
 }
 
 func TestGetGathererUnknownURI(t *testing.T) {
+	t.Parallel()
 	_, err := registry.GetGatherer("unknown://something")
 	if err == nil {
 		t.Fatal("expected error for unknown URI scheme")

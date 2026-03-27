@@ -30,6 +30,7 @@ import (
 )
 
 func TestGitGatherer_Matcher(t *testing.T) {
+	t.Parallel()
 	gg := GitGatherer{}
 
 	testCases := []struct {
@@ -48,7 +49,9 @@ func TestGitGatherer_Matcher(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := gg.Matcher(tc.uri)
 			if got != tc.want {
 				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)
@@ -127,6 +130,7 @@ func initLocalGitRepo(t *testing.T, repoDir string) (string, string) {
 }
 
 func TestProcessUrl(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name      string
 		input     string
@@ -161,9 +165,8 @@ func TestProcessUrl(t *testing.T) {
 			wantRef: "abc123",
 		},
 		{
-			name:    "git@ SSH URL",
-			input:   "git@github.com:org/repo",
-			wantSub: "github.com",
+			name:  "git@ SSH URL",
+			input: "git@github.com:org/repo",
 		},
 		{
 			name:    "path with subdir via double slash",
@@ -180,7 +183,9 @@ func TestProcessUrl(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			src, ref, subdir, depth, err := processUrl(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("processUrl(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)

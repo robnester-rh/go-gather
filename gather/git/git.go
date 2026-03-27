@@ -299,8 +299,17 @@ func extractKeyFromQuery(q url.Values, key string, subdir *string) string {
 }
 
 func processUrl(rawSource string) (src, ref, subdir, depth string, err error) {
+	// Convert SCP-style git@host:path to HTTPS before generic prefix stripping,
+	// since stripping git@ leaves host:path which confuses URL parsers when
+	// https:// is prepended (the colon is misinterpreted as a port separator).
+	if strings.HasPrefix(rawSource, "git@") {
+		rawSource = strings.TrimPrefix(rawSource, "git@")
+		rawSource = strings.Replace(rawSource, ":", "/", 1)
+		rawSource = "https://" + rawSource
+	}
+
 	// Remove any prefixes we normally see from the source URL.
-	terms := []string{"git@", "git://", "git::", "https://", "file://", "file::"}
+	terms := []string{"git://", "git::", "https://", "file://", "file::"}
 	for _, prefix := range terms {
 		rawSource = strings.TrimPrefix(rawSource, prefix)
 	}
@@ -313,7 +322,7 @@ func processUrl(rawSource string) (src, ref, subdir, depth string, err error) {
 		src = "file://" + src
 	}
 
-	if !strings.HasPrefix(src, "git@") && !strings.HasPrefix(src, "file://") {
+	if !strings.HasPrefix(src, "file://") {
 		src = "https://" + src
 	}
 

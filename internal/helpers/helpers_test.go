@@ -115,8 +115,14 @@ func TestCopyDir_Success(t *testing.T) {
 	if _, err := os.Stat(copiedFile2); os.IsNotExist(err) {
 		t.Errorf("expected %s to exist, but it does not", copiedFile2)
 	}
-	data1, _ := os.ReadFile(copiedFile1)
-	data2, _ := os.ReadFile(copiedFile2)
+	data1, err := os.ReadFile(copiedFile1)
+	if err != nil {
+		t.Fatalf("failed to read copied file: %v", err)
+	}
+	data2, err := os.ReadFile(copiedFile2)
+	if err != nil {
+		t.Fatalf("failed to read copied file: %v", err)
+	}
 	if string(data1) != "content1" {
 		t.Errorf("expected 'content1', got %s", string(data1))
 	}
