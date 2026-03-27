@@ -49,6 +49,19 @@ var Transport http.RoundTripper = http.DefaultTransport
 
 var orasCopy = oras.Copy
 
+// localhostHostRegexp matches "localhost" only when it appears as a hostname (after a scheme prefix).
+var localhostHostRegexp = regexp.MustCompile(`(^|://|::)(localhost)([:/?#]|$)`)
+
+var ociRegistryPatterns = []*regexp.Regexp{
+	regexp.MustCompile("azurecr.io"),
+	regexp.MustCompile("gcr.io"),
+	regexp.MustCompile("registry.gitlab.com"),
+	regexp.MustCompile("pkg.dev"),
+	regexp.MustCompile("[0-9]{12}.dkr.ecr.[a-z0-9-]*.amazonaws.com"),
+	regexp.MustCompile("^quay.io"),
+	regexp.MustCompile(`(?:::1|127\.0\.0\.1|(?i:localhost)):\d{1,5}`), // localhost OCI registry
+}
+
 func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.Metadata, error) {
 	select {
 	case <-ctx.Done():
@@ -56,8 +69,8 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.
 	default:
 	}
 
-	if strings.Contains(source, "localhost") {
-		source = strings.ReplaceAll(source, "localhost", "127.0.0.1")
+	if localhostHostRegexp.MatchString(source) {
+		source = localhostHostRegexp.ReplaceAllString(source, "${1}127.0.0.1${3}")
 	}
 
 	// Parse the source URI
@@ -87,7 +100,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.
 	}
 
 	// Create the destination directory
-	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
+	if err := os.MkdirAll(dst, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -149,23 +162,12 @@ func (o OCIMetadata) GetPinnedURL(u string) (string, error) {
 
 // containsOCIRegistry checks if the input string contains a known OCI registry
 func containsOCIRegistry(src string) bool {
-	matchRegistries := []*regexp.Regexp{
-		regexp.MustCompile("azurecr.io"),
-		regexp.MustCompile("gcr.io"),
-		regexp.MustCompile("registry.gitlab.com"),
-		regexp.MustCompile("pkg.dev"),
-		regexp.MustCompile("[0-9]{12}.dkr.ecr.[a-z0-9-]*.amazonaws.com"),
-		regexp.MustCompile("^quay.io"),
-		regexp.MustCompile(`(?:::1|127\.0\.0\.1|(?i:localhost)):\d{1,5}`), // localhost OCI registry
-	}
-
-	for _, matchRegistry := range matchRegistries {
+	for _, matchRegistry := range ociRegistryPatterns {
 		if matchRegistry.MatchString(src) {
 			return true
 		}
 	}
 	return false
-
 }
 
 func ociURLParse(source string) string {
