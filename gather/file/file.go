@@ -207,7 +207,7 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 	f.Size = writtenSize
 	f.Timestamp = time.Now().Format(time.RFC3339)
 
-	return f.FSMetadata, nil
+	return &f.FSMetadata, nil
 }
 
 func getExpander(src string) (expand.Expander, error) {
