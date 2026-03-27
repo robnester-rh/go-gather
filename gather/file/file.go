@@ -63,7 +63,6 @@ func (f *FileGatherer) Matcher(uri string) bool {
 		return false // file does not exist, so it is not a file path.
 	}
 	// If we reach here, the error is due to something else (e.g., permission error).
-	fmt.Printf("Error: %v\n", err)
 	return false
 }
 
@@ -105,7 +104,7 @@ func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Me
 		}
 		f.Path = dst
 		f.Size = dirSize
-		f.Timestamp = time.Now().String()
+		f.Timestamp = time.Now().Format(time.RFC3339)
 		return &f.FSMetadata, nil
 	}
 
@@ -134,7 +133,7 @@ func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Me
 		}
 		f.Path = dst
 		f.Size = dirSize
-		f.Timestamp = time.Now().String()
+		f.Timestamp = time.Now().Format(time.RFC3339)
 		return &f.FSMetadata, nil
 	}
 

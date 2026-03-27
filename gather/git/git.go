@@ -19,7 +19,6 @@ package git
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -34,8 +33,11 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 
 	"github.com/conforma/go-gather/gather"
+	"github.com/conforma/go-gather/internal/helpers"
 	"github.com/conforma/go-gather/metadata"
 )
+
+var filePathPattern = regexp.MustCompile(`^(\./|\../|/|[a-zA-Z]:\\|~\/).*`)
 
 type GitGatherer struct {
 	GitMetadata
@@ -166,7 +168,7 @@ func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Met
 			return nil, fmt.Errorf("path %s does not exist in the repository", subdir)
 		}
 		path := filepath.Join(tmpDir, subdir)
-		err = copyDir(path, dst)
+		err = helpers.CopyDir(path, dst)
 		if err != nil {
 			return nil, fmt.Errorf("error copying directory: %w", err)
 		}
@@ -209,82 +211,6 @@ func (r *RealSSHAuthenticator) NewSSHAgentAuth(user string) (transport.AuthMetho
 	return ssh.NewSSHAgentAuth(user)
 }
 
-// copyDir copies the contents of the src directory to dst directory
-func copyDir(src string, dst string) error {
-	src = filepath.Clean(src)
-	dst = filepath.Clean(dst)
-
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return fmt.Errorf("error getting source directory info: %w", err)
-	}
-
-	if !srcInfo.IsDir() {
-		return fmt.Errorf("%s is not a directory", src)
-	}
-
-	_, err = os.Stat(dst)
-	if err != nil {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(dst, srcInfo.Mode())
-			if err != nil {
-				return err
-			}
-		} else {
-			return err
-		}
-	}
-
-	entries, err := os.ReadDir(src)
-	if err != nil {
-		return err
-	}
-
-	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
-
-		if entry.IsDir() {
-			err = copyDir(srcPath, dstPath)
-			if err != nil {
-				return err
-			}
-		} else {
-			err = copyFile(srcPath, dstPath)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// copyFile copies a file from src to dst
-func copyFile(src string, dst string) error {
-	srcFile, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer srcFile.Close()
-
-	dstFile, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer dstFile.Close()
-
-	_, err = io.Copy(dstFile, srcFile)
-	if err != nil {
-		return err
-	}
-
-	srcInfo, err := os.Stat(src)
-	if err != nil {
-		return err
-	}
-	return os.Chmod(dst, srcInfo.Mode())
-}
-
 // extractKeyFromQuery extracts the value of the specified key from the query parameters and extracts a subdir, if present.
 func extractKeyFromQuery(q url.Values, key string, subdir *string) string {
 	value := q.Get(key)
@@ -305,9 +231,6 @@ func processUrl(rawSource string) (src, ref, subdir, depth string, err error) {
 		rawSource = strings.TrimPrefix(rawSource, prefix)
 	}
 	src = rawSource
-
-	// Regular expression for file paths
-	filePathPattern := regexp.MustCompile(`^(\./|\../|/|[a-zA-Z]:\\|~\/).*`)
 
 	if filePathPattern.MatchString(src) {
 		src = "file://" + src

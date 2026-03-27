@@ -59,7 +59,7 @@ func SetupClient(repository *remote.Repository, transport http.RoundTripper) err
 		Credential: credentials.Credential(store),
 		Cache:      auth.NewCache(),
 	}
-	client.SetUserAgent("conftest")
+	client.SetUserAgent("go-gather")
 
 	repository.Client = client
 
