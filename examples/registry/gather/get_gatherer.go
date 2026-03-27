@@ -22,7 +22,7 @@ import (
 	"github.com/conforma/go-gather/registry"
 )
 
-func main(){
+func main() {
 	//-------------------------------------------------------------------------
 	// The following code shows how to utilize the GetGatherer function from the
 	// registry package to get the appropriate gatherer for a given source URL
