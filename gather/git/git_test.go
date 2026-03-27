@@ -134,52 +134,62 @@ func TestProcessUrl(t *testing.T) {
 	tests := []struct {
 		name      string
 		input     string
+		wantSrc   string
 		wantRef   string
 		wantSub   string
 		wantDepth string
 		wantErr   bool
 	}{
 		{
-			name:  "https github URL",
-			input: "https://github.com/org/repo",
+			name:    "https github URL",
+			input:   "https://github.com/org/repo",
+			wantSrc: "https://github.com/org/repo.git",
 		},
 		{
 			name:    "https with ref",
 			input:   "https://github.com/org/repo?ref=v1.0",
+			wantSrc: "https://github.com/org/repo.git",
 			wantRef: "v1.0",
 		},
 		{
 			name:    "https with ref and subdir",
 			input:   "https://github.com/org/repo?ref=main//subdir",
+			wantSrc: "https://github.com/org/repo.git",
 			wantRef: "main",
 			wantSub: "subdir",
 		},
 		{
 			name:      "https with depth",
 			input:     "https://github.com/org/repo?depth=1",
+			wantSrc:   "https://github.com/org/repo.git",
 			wantDepth: "1",
 		},
 		{
 			name:    "git:: prefix with ref",
 			input:   "git::https://github.com/org/repo?ref=abc123",
+			wantSrc: "https://github.com/org/repo.git",
 			wantRef: "abc123",
 		},
 		{
-			name:  "git@ SSH URL",
-			input: "git@github.com:org/repo",
+			name:    "git@ SSH URL",
+			input:   "git@github.com:org/repo",
+			wantSrc: "https://github.com/org/repo.git",
 		},
 		{
 			name:    "path with subdir via double slash",
 			input:   "https://github.com/org/repo//policies/base",
+			wantSrc: "https://github.com/org/repo.git",
 			wantSub: "policies/base",
 		},
 		{
-			name:  "file path",
-			input: "file:///tmp/local-repo",
+			name:    "file path",
+			input:   "file:///tmp/local-repo",
+			wantSrc: "file:///tmp/local-repo",
 		},
 		{
-			name:  "relative file path",
-			input: "./local-repo",
+			name:    "relative file path",
+			input:   "./local-repo",
+			wantSrc: "file://./local-repo",
 		},
 	}
 	for _, tt := range tests {
@@ -194,8 +204,8 @@ func TestProcessUrl(t *testing.T) {
 			if err != nil {
 				return
 			}
-			if src == "" {
-				t.Errorf("processUrl(%q) returned empty src", tt.input)
+			if tt.wantSrc != "" && src != tt.wantSrc {
+				t.Errorf("processUrl(%q) src = %q, want %q", tt.input, src, tt.wantSrc)
 			}
 			if ref != tt.wantRef {
 				t.Errorf("processUrl(%q) ref = %q, want %q", tt.input, ref, tt.wantRef)
