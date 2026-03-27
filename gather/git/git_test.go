@@ -125,3 +125,82 @@ func initLocalGitRepo(t *testing.T, repoDir string) (string, string) {
 
 	return repoDir, commit.String()
 }
+
+func TestProcessUrl(t *testing.T) {
+	tests := []struct {
+		name      string
+		input     string
+		wantRef   string
+		wantSub   string
+		wantDepth string
+		wantErr   bool
+	}{
+		{
+			name:  "https github URL",
+			input: "https://github.com/org/repo",
+		},
+		{
+			name:    "https with ref",
+			input:   "https://github.com/org/repo?ref=v1.0",
+			wantRef: "v1.0",
+		},
+		{
+			name:    "https with ref and subdir",
+			input:   "https://github.com/org/repo?ref=main//subdir",
+			wantRef: "main",
+			wantSub: "subdir",
+		},
+		{
+			name:      "https with depth",
+			input:     "https://github.com/org/repo?depth=1",
+			wantDepth: "1",
+		},
+		{
+			name:    "git:: prefix with ref",
+			input:   "git::https://github.com/org/repo?ref=abc123",
+			wantRef: "abc123",
+		},
+		{
+			name:    "git@ SSH URL",
+			input:   "git@github.com:org/repo",
+			wantSub: "github.com",
+		},
+		{
+			name:    "path with subdir via double slash",
+			input:   "https://github.com/org/repo//policies/base",
+			wantSub: "policies/base",
+		},
+		{
+			name:  "file path",
+			input: "file:///tmp/local-repo",
+		},
+		{
+			name:  "relative file path",
+			input: "./local-repo",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			src, ref, subdir, depth, err := processUrl(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("processUrl(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if src == "" {
+				t.Errorf("processUrl(%q) returned empty src", tt.input)
+			}
+			if ref != tt.wantRef {
+				t.Errorf("processUrl(%q) ref = %q, want %q", tt.input, ref, tt.wantRef)
+			}
+			if subdir != tt.wantSub {
+				t.Errorf("processUrl(%q) subdir = %q, want %q", tt.input, subdir, tt.wantSub)
+			}
+			if depth != tt.wantDepth {
+				t.Errorf("processUrl(%q) depth = %q, want %q", tt.input, depth, tt.wantDepth)
+			}
+		})
+	}
+}

@@ -56,6 +56,34 @@ func TestOCIGatherer_Matcher(t *testing.T) {
 	}
 }
 
+func TestMatcherOCIRegistries(t *testing.T) {
+	g := &OCIGatherer{}
+	tests := []struct {
+		name string
+		uri  string
+		want bool
+	}{
+		{"azure container registry", "myregistry.azurecr.io/repo:tag", true},
+		{"google container registry", "gcr.io/project/image:tag", true},
+		{"gitlab registry", "registry.gitlab.com/group/project:tag", true},
+		{"google artifact registry", "us-docker.pkg.dev/project/repo/image:tag", true},
+		{"aws ecr", "123456789012.dkr.ecr.us-east-1.amazonaws.com/repo:tag", true},
+		{"quay.io", "quay.io/namespace/repo:tag", true},
+		{"localhost with port", "localhost:5000/repo:tag", true},
+		{"127.0.0.1 with port", "127.0.0.1:5000/repo:tag", true},
+		{"random domain", "example.com/repo:tag", false},
+		{"empty string", "", false},
+		{"plain text", "hello world", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := g.Matcher(tt.uri); got != tt.want {
+				t.Errorf("Matcher(%q) = %v, want %v", tt.uri, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestOCIGatherer_Gather_Success(t *testing.T) {
 	artifactRef := "127.0.0.1:5000/my-repo:latest"
 	memoryStore := memory.New()
