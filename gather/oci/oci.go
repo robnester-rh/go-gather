@@ -108,7 +108,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.
 	o.Path = dst
 	o.Timestamp = time.Now().Format(time.RFC3339)
 
-	return o.OCIMetadata, nil
+	return &o.OCIMetadata, nil
 }
 
 func (o *OCIGatherer) Matcher(uri string) bool {
@@ -126,7 +126,7 @@ func (o OCIMetadata) Get() interface{} {
 	return o
 }
 
-func (o *OCIMetadata) GetDigest() string {
+func (o OCIMetadata) GetDigest() string {
 	return o.Digest
 }
 

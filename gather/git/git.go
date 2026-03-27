@@ -180,7 +180,7 @@ func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Met
 	m := GitMetadata{
 		LatestCommit: head.Hash().String(),
 	}
-	return m, nil
+	return &m, nil
 }
 
 func (g GitMetadata) Get() interface{} {
