@@ -193,6 +193,7 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 	}
 	defer func() {
 		if cerr := dstFile.Close(); cerr != nil && err == nil {
+			meta = nil
 			err = cerr
 		}
 	}()

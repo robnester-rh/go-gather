@@ -53,7 +53,7 @@ func NewHTTPGatherer() *HTTPGatherer {
 	}
 }
 
-func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (_ metadata.Metadata, err error) {
+func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (meta metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -130,6 +130,7 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (_ met
 	}
 	defer func() {
 		if cerr := outFile.Close(); cerr != nil && err == nil {
+			meta = nil
 			err = cerr
 		}
 	}()
@@ -139,13 +140,13 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (_ met
 		return nil, fmt.Errorf("failed to write to destination file: %w", err)
 	}
 
-	h.URI = rawSource
-	h.Path = dst
-	h.ResponseCode = resp.StatusCode
-	h.Size = bytesWritten
-	h.Timestamp = time.Now().Format(time.RFC3339)
-
-	return h.HTTPMetadata, nil
+	return HTTPMetadata{
+		URI:          rawSource,
+		Path:         dst,
+		ResponseCode: resp.StatusCode,
+		Size:         bytesWritten,
+		Timestamp:    time.Now().Format(time.RFC3339),
+	}, nil
 }
 
 func (h *HTTPGatherer) Matcher(uri string) bool {
