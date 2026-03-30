@@ -131,7 +131,7 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (meta 
 	defer func() {
 		if cerr := outFile.Close(); cerr != nil && err == nil {
 			meta = nil
-			err = cerr
+			err = fmt.Errorf("failed to close destination file: %w", cerr)
 		}
 	}()
 

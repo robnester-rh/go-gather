@@ -54,13 +54,13 @@ var orasCopy = oras.Copy
 var localhostHostRegexp = regexp.MustCompile(`(^|://|::)(localhost)([:/?#]|$)`)
 
 var ociRegistryPatterns = []*regexp.Regexp{
-	regexp.MustCompile("azurecr.io"),
-	regexp.MustCompile("gcr.io"),
-	regexp.MustCompile("registry.gitlab.com"),
-	regexp.MustCompile("pkg.dev"),
-	regexp.MustCompile("[0-9]{12}.dkr.ecr.[a-z0-9-]*.amazonaws.com"),
-	regexp.MustCompile("^quay.io"),
-	regexp.MustCompile(`(?:::1|127\.0\.0\.1|(?i:localhost)):\d{1,5}`), // localhost OCI registry
+	regexp.MustCompile(`(^|\.)azurecr\.io$`),
+	regexp.MustCompile(`(^|\.)gcr\.io$`),
+	regexp.MustCompile(`^registry\.gitlab\.com$`),
+	regexp.MustCompile(`(^|\.)pkg\.dev$`),
+	regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$`),
+	regexp.MustCompile(`^quay\.io$`),
+	regexp.MustCompile(`^(?:::1|127\.0\.0\.1|(?i:localhost))$`),
 }
 
 func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta metadata.Metadata, err error) {
@@ -113,7 +113,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta meta
 	defer func() {
 		if cerr := fileStore.Close(); cerr != nil && err == nil {
 			meta = nil
-			err = cerr
+			err = fmt.Errorf("failed to close OCI file store: %w", cerr)
 		}
 	}()
 
@@ -177,8 +177,8 @@ func containsOCIRegistry(src string) bool {
 	return false
 }
 
-// extractHost returns the host (with port if present) from a URI, handling
-// scheme prefixes like "oci://", "oci::", "https://", and bare "host/path" forms.
+// extractHost returns the lowercase hostname (without port) from a URI,
+// handling scheme prefixes like "oci://", "oci::", "https://", and bare "host/path" forms.
 func extractHost(src string) string {
 	// Strip go-getter style "scheme::" prefixes
 	if idx := strings.Index(src, "::"); idx != -1 {
@@ -192,9 +192,9 @@ func extractHost(src string) string {
 
 	u, err := url.Parse(src)
 	if err != nil || u.Host == "" {
-		return src
+		return strings.ToLower(src)
 	}
-	return u.Host
+	return strings.ToLower(u.Hostname())
 }
 
 func ociURLParse(source string) string {

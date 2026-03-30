@@ -264,6 +264,13 @@ func TestContainsOCIRegistry(t *testing.T) {
 		{"registry name in path with quay", "https://example.com/quay.io/something", false},
 		{"plain http URL", "https://example.com/policies", false},
 		{"git URL", "https://github.com/org/repo", false},
+		{"unescaped dot azurecr", "https://myazurecrXio.example.com/repo", false},
+		{"unescaped dot gcr", "https://gcrXio.example.com/repo", false},
+		{"quay.io subdomain spoof", "https://quay.io.evil.com/repo", false},
+		{"quay.io prefix spoof", "https://quayXio.evil.com/repo", false},
+		{"case insensitive localhost", "LOCALHOST:5000/myrepo", true},
+		{"gitlab registry", "https://registry.gitlab.com/group/project", true},
+		{"pkg.dev registry", "https://us-docker.pkg.dev/project/repo/image", true},
 	}
 
 	for _, tc := range tests {
