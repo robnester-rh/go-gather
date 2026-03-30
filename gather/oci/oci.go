@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -121,11 +122,11 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (_ metadat
 		return nil, fmt.Errorf("pulling policy: %w", err)
 	}
 
-	o.Digest = a.Digest.String()
-	o.Path = dst
-	o.Timestamp = time.Now().Format(time.RFC3339)
-
-	return &o.OCIMetadata, nil
+	return &OCIMetadata{
+		Digest:    a.Digest.String(),
+		Path:      dst,
+		Timestamp: time.Now().Format(time.RFC3339),
+	}, nil
 }
 
 func (o *OCIGatherer) Matcher(uri string) bool {
@@ -164,14 +165,35 @@ func (o OCIMetadata) GetPinnedURL(u string) (string, error) {
 	return fmt.Sprintf("oci::%s@%s", u, o.Digest), nil
 }
 
-// containsOCIRegistry checks if the input string contains a known OCI registry
+// containsOCIRegistry checks if the input string's hostname matches a known OCI registry.
 func containsOCIRegistry(src string) bool {
+	host := extractHost(src)
 	for _, matchRegistry := range ociRegistryPatterns {
-		if matchRegistry.MatchString(src) {
+		if matchRegistry.MatchString(host) {
 			return true
 		}
 	}
 	return false
+}
+
+// extractHost returns the host (with port if present) from a URI, handling
+// scheme prefixes like "oci://", "oci::", "https://", and bare "host/path" forms.
+func extractHost(src string) string {
+	// Strip go-getter style "scheme::" prefixes
+	if idx := strings.Index(src, "::"); idx != -1 {
+		src = src[idx+2:]
+	}
+
+	// Ensure a scheme so url.Parse treats the host correctly
+	if !strings.Contains(src, "://") {
+		src = "oci://" + src
+	}
+
+	u, err := url.Parse(src)
+	if err != nil || u.Host == "" {
+		return src
+	}
+	return u.Host
 }
 
 func ociURLParse(source string) string {

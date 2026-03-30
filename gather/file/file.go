@@ -102,10 +102,11 @@ func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Me
 		if err != nil {
 			return nil, err
 		}
-		f.Path = dst
-		f.Size = dirSize
-		f.Timestamp = time.Now().Format(time.RFC3339)
-		return &f.FSMetadata, nil
+		return &FSMetadata{
+			Path:      dst,
+			Size:      dirSize,
+			Timestamp: time.Now().Format(time.RFC3339),
+		}, nil
 	}
 
 	compressedFile, err := expand.IsCompressedFile(src)
@@ -131,10 +132,11 @@ func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Me
 		if err != nil {
 			return nil, err
 		}
-		f.Path = dst
-		f.Size = dirSize
-		f.Timestamp = time.Now().Format(time.RFC3339)
-		return &f.FSMetadata, nil
+		return &FSMetadata{
+			Path:      dst,
+			Size:      dirSize,
+			Timestamp: time.Now().Format(time.RFC3339),
+		}, nil
 	}
 
 	// TODO: Figure out how to make this flexible for different types of destinations
@@ -205,11 +207,11 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 	if err != nil {
 		return nil, fmt.Errorf("failed to write to file: %w", err)
 	}
-	f.Path = dst.Path
-	f.Size = writtenSize
-	f.Timestamp = time.Now().Format(time.RFC3339)
-
-	return &f.FSMetadata, nil
+	return &FSMetadata{
+		Path:      dst.Path,
+		Size:      writtenSize,
+		Timestamp: time.Now().Format(time.RFC3339),
+	}, nil
 }
 
 func getExpander(src string) (expand.Expander, error) {
