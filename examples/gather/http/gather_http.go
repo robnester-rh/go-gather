@@ -23,7 +23,7 @@ import (
 	"github.com/conforma/go-gather/gather/http"
 )
 
-func main(){
+func main() {
 	// -------------------------------------------------------------------------
 	// The following code shows how to gather the contents of a http repository
 	// to a destination directory using the http gatherer

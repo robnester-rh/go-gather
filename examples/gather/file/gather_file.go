@@ -24,8 +24,7 @@ import (
 	"github.com/conforma/go-gather/gather/file"
 )
 
-
-func main(){
+func main() {
 
 	//-------------------------------------------------------------------------
 	// These lines of code create a source directory containing 5 files, and a
@@ -35,7 +34,6 @@ func main(){
 	defer os.RemoveAll(src)
 	defer os.RemoveAll(dst)
 
-
 	//-------------------------------------------------------------------------
 	// The following code shows how to gather the contents of a source directory
 	// to a destination directory using the file gatherer
@@ -44,7 +42,7 @@ func main(){
 	// Create a new file gatherer
 	g := &file.FileGatherer{}
 
-	// Gather the contents of the source directory to the destination directory, 
+	// Gather the contents of the source directory to the destination directory,
 	// returning a metadata struct
 	m, err := g.Gather(context.Background(), src, dst)
 	if err != nil {
@@ -57,7 +55,6 @@ func main(){
 	fmt.Println("Destination Path: ", metadata.Path)
 	fmt.Println("Directory Size: ", metadata.Size)
 }
-
 
 func setup(base string) (string, string) {
 	// Setting up a temporary directory to act as our source dir
@@ -80,7 +77,7 @@ func setup(base string) (string, string) {
 }
 
 func createFiles(src string, fileBase string, fileCount int) error {
-	for i := 0; i < fileCount; i++ {			
+	for i := 0; i < fileCount; i++ {
 		f, err := os.CreateTemp(src, fmt.Sprintf("%s_file_", fileBase))
 		if err != nil {
 			return err

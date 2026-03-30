@@ -15,6 +15,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 ---
+version: "2"
 run:
   build-tags:
     - acceptance
@@ -22,15 +23,35 @@ run:
     - integration
     - unit
 linters:
+  default: none
+  enable:
+    - gosec
+    - misspell
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
   enable:
     - gci
     - gofmt
     - goimports
-    - gosec
-    - misspell
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/conforma/go-gather)
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/conforma/go-gather)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

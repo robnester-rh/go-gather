@@ -1,6 +1,6 @@
 MAKEFLAGS+=-j --no-print-directory
 _SHELL := bash
-SHELL=$(if $@,$(info ❱ [1m$@[0m))$(_SHELL)
+SHELL=$(if $@,$(info ? [1m$@[0m))$(_SHELL)
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 COPY:=The Enterprise Contract Contributors
 
@@ -39,11 +39,11 @@ go.work:
 .PHONY: test
 test: go.work ## Run all unit tests
 	@echo "Unit tests:"
-	@go test -race -covermode=atomic -coverprofile=coverage-unit.out -timeout 1000ms -tags=unit $$(go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]')
+	@go test -race -covermode=atomic -coverprofile=coverage-unit.out -timeout 30s -tags=unit $$(go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]')
 
 .PHONY: lint
 lint: go.work go-mod-lint ## Run linter
-	@golangci-lint run --sort-results -- $$(go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]')
+	@golangci-lint run -- $$(go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]')
 
 .PHONY: go-mod-lint
 go-mod-lint:
@@ -59,4 +59,4 @@ go-mod-lint:
 
 .PHONY: lint-fix
 lint-fix: go.work
-	@golangci-lint run --sort-results --fix -- $$(go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]')
+	@golangci-lint run --fix -- $$(go work edit -json | jq -c -r '[.Use[].DiskPath] | map_values(. + "/...")[]')

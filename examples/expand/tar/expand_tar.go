@@ -28,7 +28,7 @@ import (
 func main() {
 	//-------------------------------------------------------------------------
 	// The following code sets up a source directory containing a tar archive
-	// file, "test.tar" containing a file, "test.txt", and a destination 
+	// file, "test.tar" containing a file, "test.txt", and a destination
 	// directory to expand the tar compressed file to.
 	//-------------------------------------------------------------------------
 	src, dst := setup()
@@ -42,7 +42,6 @@ func main() {
 
 	// Set the source to the tar compressed file
 	src = filepath.Join(src, "test.tar")
-
 
 	// Create a new tar expander
 	t := &tarExpander.TarExpander{}

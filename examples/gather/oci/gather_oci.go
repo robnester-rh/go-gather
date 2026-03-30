@@ -55,5 +55,5 @@ func main() {
 	println("Destination Path: ", metadata.Path)
 	println("Diget", metadata.Digest)
 	println("Timestamp", metadata.Timestamp)
-	
+
 }
