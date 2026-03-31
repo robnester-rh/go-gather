@@ -36,9 +36,7 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
-type OCIGatherer struct {
-	OCIMetadata
-}
+type OCIGatherer struct{}
 
 type OCIMetadata struct {
 	Path      string

@@ -35,7 +35,6 @@ import (
 var Transport http.RoundTripper = http.DefaultTransport
 
 type HTTPGatherer struct {
-	HTTPMetadata
 	Client http.Client
 }
 

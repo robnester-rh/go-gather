@@ -31,9 +31,7 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
-type FileGatherer struct {
-	FSMetadata
-}
+type FileGatherer struct{}
 
 type FSMetadata struct {
 	URI       string
@@ -42,9 +40,7 @@ type FSMetadata struct {
 	Timestamp string
 }
 
-type FileSaver struct {
-	FSMetadata
-}
+type FileSaver struct{}
 
 func (f *FileGatherer) Matcher(uri string) bool {
 	prefixes := []string{"file://", "file::", "/", "./", "../"}
