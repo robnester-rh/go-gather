@@ -86,9 +86,9 @@ func TestFileGatherer_Gather_File(t *testing.T) {
 		t.Fatalf("expected file %s to exist, but it does not", dstFile)
 	}
 
-	fsMeta, ok := meta.(FSMetadata)
+	fsMeta, ok := meta.(*FSMetadata)
 	if !ok {
-		t.Fatalf("expected FSMetadata, got %T", meta)
+		t.Fatalf("expected *FSMetadata, got %T", meta)
 	}
 	if fsMeta.Path != dstFile {
 		t.Errorf("expected metadata path=%s, got %s", dstFile, fsMeta.Path)

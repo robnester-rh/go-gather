@@ -28,7 +28,7 @@ import (
 	"github.com/conforma/go-gather/internal/oci/network"
 )
 
-/* This code is sourced from the open-policy-agent/conftest project. */
+/* Originally sourced from the open-policy-agent/conftest project, adapted for go-gather. */
 
 func SetupClient(repository *remote.Repository, transport http.RoundTripper) error {
 	registry := repository.Reference.Host()
@@ -59,7 +59,7 @@ func SetupClient(repository *remote.Repository, transport http.RoundTripper) err
 		Credential: credentials.Credential(store),
 		Cache:      auth.NewCache(),
 	}
-	client.SetUserAgent("conftest")
+	client.SetUserAgent("go-gather")
 
 	repository.Client = client
 

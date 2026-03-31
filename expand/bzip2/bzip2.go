@@ -35,8 +35,8 @@ type Bzip2Expander struct {
 	FileSizeLimit int64
 }
 
-func (b *Bzip2Expander) Expand(ctx context.Context, src, dst string, umask os.FileMode) error {
-	src, err := pathExpanderFunc(src)
+func (b *Bzip2Expander) Expand(ctx context.Context, src, dst string, umask os.FileMode) (err error) {
+	src, err = pathExpanderFunc(src)
 	if err != nil {
 		return fmt.Errorf("failed to expand source path: %w", err)
 	}
@@ -66,7 +66,11 @@ func (b *Bzip2Expander) Expand(ctx context.Context, src, dst string, umask os.Fi
 	if err != nil {
 		return fmt.Errorf("failed to create file %q: %w", dst, err)
 	}
-	defer outFile.Close()
+	defer func() {
+		if cerr := outFile.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	const bufferSize = 32 * 1024 // 32 KB
 	buffer := make([]byte, bufferSize)

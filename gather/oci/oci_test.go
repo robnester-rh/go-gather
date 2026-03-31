@@ -87,7 +87,7 @@ func TestOCIGatherer_Gather_Success(t *testing.T) {
 		t.Fatalf("Gather returned an error: %v", err)
 	}
 
-	ociMeta, ok := meta.(OCIMetadata)
+	ociMeta, ok := meta.(*OCIMetadata)
 	if !ok {
 		t.Fatalf("expected *OCIMetadata, got %T", meta)
 	}
@@ -243,6 +243,45 @@ func pushTestArtifact(m *memory.Store, finalRef string, data []byte) error {
 	}
 
 	return nil
+}
+
+func TestContainsOCIRegistry(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		src  string
+		want bool
+	}{
+		{"quay.io bare", "quay.io/my-org/my-repo:latest", true},
+		{"quay.io with oci scheme", "oci://quay.io/my-org/my-repo:latest", true},
+		{"gcr.io with https", "https://gcr.io/my-project/image", true},
+		{"ecr registry", "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-repo", true},
+		{"localhost with port", "localhost:5000/myrepo", true},
+		{"127.0.0.1 with port", "127.0.0.1:5000/myrepo", true},
+		{"azure container registry", "myacr.azurecr.io/repo:tag", true},
+		{"registry name in path only", "https://example.com/docs/gcr.io-mirror", false},
+		{"registry name in path with quay", "https://example.com/quay.io/something", false},
+		{"plain http URL", "https://example.com/policies", false},
+		{"git URL", "https://github.com/org/repo", false},
+		{"unescaped dot azurecr", "https://myazurecrXio.example.com/repo", false},
+		{"unescaped dot gcr", "https://gcrXio.example.com/repo", false},
+		{"quay.io subdomain spoof", "https://quay.io.evil.com/repo", false},
+		{"quay.io prefix spoof", "https://quayXio.evil.com/repo", false},
+		{"case insensitive localhost", "LOCALHOST:5000/myrepo", true},
+		{"gitlab registry", "https://registry.gitlab.com/group/project", true},
+		{"pkg.dev registry", "https://us-docker.pkg.dev/project/repo/image", true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := containsOCIRegistry(tc.src)
+			if got != tc.want {
+				t.Errorf("containsOCIRegistry(%q) = %v, want %v", tc.src, got, tc.want)
+			}
+		})
+	}
 }
 
 // Optional TestOCIMetadata_Get to show retrieving the raw metadata structure

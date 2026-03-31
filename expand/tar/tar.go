@@ -110,6 +110,23 @@ func extractTarGz(input io.Reader, dst string, fileSizeLimit int64, filesLimit i
 	return untar(gzr, dst, "", fileSizeLimit, filesLimit)
 }
 
+// writeTarFile creates path, copies from r into it, and returns any copy or close error.
+func writeTarFile(fPath string, mode os.FileMode, r io.Reader) (err error) {
+	outFile, err := os.OpenFile(fPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return fmt.Errorf("error creating file (%s): %w", fPath, err)
+	}
+	defer func() {
+		if cerr := outFile.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
+	if _, err = io.Copy(outFile, r); err != nil {
+		return fmt.Errorf("error extracting file (%s): %w", fPath, err)
+	}
+	return nil
+}
+
 // untar is a helper function that untars a tarball to a destination directory based on the provided options.
 func untar(input io.Reader, dst, src string, fileSizeLimit int64, filesLimit int) error {
 	tarReader := tar.NewReader(input)
@@ -186,18 +203,9 @@ func untar(input io.Reader, dst, src string, fileSizeLimit int64, filesLimit int
 		}
 		// Extract the file
 
-		// Create the file with header.Mode permissions
-		outFile, err := os.OpenFile(fPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, header.FileInfo().Mode())
-		if err != nil {
-			return fmt.Errorf("error creating file (%s): %w", fPath, err)
+		if err := writeTarFile(fPath, header.FileInfo().Mode(), tarReader); err != nil {
+			return err
 		}
-
-		// Copy file content
-		if _, err := io.Copy(outFile, tarReader); err != nil {
-			outFile.Close()
-			return fmt.Errorf("error extracting file (%s): %w", fPath, err)
-		}
-		outFile.Close()
 
 		// Set file times
 		aTime, mTime := now, now

@@ -99,7 +99,7 @@ func (z *ZipExpander) Expand(ctx context.Context, src, dst string, umask os.File
 }
 
 // extractFile handles the extraction of a single file from the ZIP archive.
-func (z *ZipExpander) extractFile(f *zip.File, filePath string, buffer []byte) error {
+func (z *ZipExpander) extractFile(f *zip.File, filePath string, buffer []byte) (err error) {
 	// Open the source file within the archive
 	srcFile, err := f.Open()
 	if err != nil {
@@ -112,7 +112,11 @@ func (z *ZipExpander) extractFile(f *zip.File, filePath string, buffer []byte) e
 	if err != nil {
 		return fmt.Errorf("failed to create file %q: %w", filePath, err)
 	}
-	defer dstFile.Close()
+	defer func() {
+		if cerr := dstFile.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	// Enforce file size limit during copy
 	var totalBytes int64

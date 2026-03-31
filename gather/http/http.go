@@ -35,7 +35,6 @@ import (
 var Transport http.RoundTripper = http.DefaultTransport
 
 type HTTPGatherer struct {
-	HTTPMetadata
 	Client http.Client
 }
 
@@ -53,7 +52,7 @@ func NewHTTPGatherer() *HTTPGatherer {
 	}
 }
 
-func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (metadata.Metadata, error) {
+func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (meta metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
@@ -128,30 +127,45 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (metad
 	if err != nil {
 		return nil, fmt.Errorf("failed to create destination file: %w", err)
 	}
-	defer outFile.Close()
+	defer func() {
+		if cerr := outFile.Close(); cerr != nil && err == nil {
+			meta = nil
+			err = fmt.Errorf("failed to close destination file: %w", cerr)
+		}
+	}()
 
 	bytesWritten, err := io.Copy(outFile, resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write to destination file: %w", err)
 	}
 
-	h.URI = rawSource
-	h.Path = dst
-	h.ResponseCode = resp.StatusCode
-	h.Size = bytesWritten
-	h.Timestamp = time.Now().Format(time.RFC3339)
-
-	return h.HTTPMetadata, nil
+	return HTTPMetadata{
+		URI:          rawSource,
+		Path:         dst,
+		ResponseCode: resp.StatusCode,
+		Size:         bytesWritten,
+		Timestamp:    time.Now().Format(time.RFC3339),
+	}, nil
 }
 
 func (h *HTTPGatherer) Matcher(uri string) bool {
-	prefixes := []string{"http://", "https://"}
-	for _, prefix := range prefixes {
-		if strings.HasPrefix(uri, prefix) && !(strings.Contains(uri, "github.com") || strings.Contains(uri, "gitlab.com") || strings.Contains(uri, "bitbucket.com")) {
-			return true
+	u, err := url.Parse(uri)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "" {
+		return false
+	}
+	for _, vendor := range []string{"github.com", "gitlab.com", "bitbucket.org"} {
+		if host == vendor || strings.HasSuffix(host, "."+vendor) {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (h HTTPMetadata) Get() interface{} {

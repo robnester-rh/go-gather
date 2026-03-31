@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
 	"strings"
@@ -35,9 +36,7 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
-type OCIGatherer struct {
-	OCIMetadata
-}
+type OCIGatherer struct{}
 
 type OCIMetadata struct {
 	Path      string
@@ -49,15 +48,28 @@ var Transport http.RoundTripper = http.DefaultTransport
 
 var orasCopy = oras.Copy
 
-func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.Metadata, error) {
+// localhostHostRegexp matches "localhost" only when it appears as a hostname (after a scheme prefix).
+var localhostHostRegexp = regexp.MustCompile(`(^|://|::)(localhost)([:/?#]|$)`)
+
+var ociRegistryPatterns = []*regexp.Regexp{
+	regexp.MustCompile(`(^|\.)azurecr\.io$`),
+	regexp.MustCompile(`(^|\.)gcr\.io$`),
+	regexp.MustCompile(`^registry\.gitlab\.com$`),
+	regexp.MustCompile(`(^|\.)pkg\.dev$`),
+	regexp.MustCompile(`^[0-9]{12}\.dkr\.ecr\.[a-z0-9-]+\.amazonaws\.com$`),
+	regexp.MustCompile(`^quay\.io$`),
+	regexp.MustCompile(`^(?:::1|127\.0\.0\.1|(?i:localhost))$`),
+}
+
+func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
 	}
 
-	if strings.Contains(source, "localhost") {
-		source = strings.ReplaceAll(source, "localhost", "127.0.0.1")
+	if localhostHostRegexp.MatchString(source) {
+		source = localhostHostRegexp.ReplaceAllString(source, "${1}127.0.0.1${3}")
 	}
 
 	// Parse the source URI
@@ -87,7 +99,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.
 	}
 
 	// Create the destination directory
-	if err := os.MkdirAll(dst, os.ModePerm); err != nil {
+	if err := os.MkdirAll(dst, 0755); err != nil {
 		return nil, fmt.Errorf("failed to create directory: %w", err)
 	}
 
@@ -96,7 +108,12 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.
 	if err != nil {
 		return nil, fmt.Errorf("file store: %w", err)
 	}
-	defer fileStore.Close()
+	defer func() {
+		if cerr := fileStore.Close(); cerr != nil && err == nil {
+			meta = nil
+			err = fmt.Errorf("failed to close OCI file store: %w", cerr)
+		}
+	}()
 
 	// Copy the artifact to the file store
 	a, err := orasCopy(ctx, src, repo, fileStore, "", oras.DefaultCopyOptions)
@@ -104,11 +121,11 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (metadata.
 		return nil, fmt.Errorf("pulling policy: %w", err)
 	}
 
-	o.Digest = a.Digest.String()
-	o.Path = dst
-	o.Timestamp = time.Now().Format(time.RFC3339)
-
-	return o.OCIMetadata, nil
+	return &OCIMetadata{
+		Digest:    a.Digest.String(),
+		Path:      dst,
+		Timestamp: time.Now().Format(time.RFC3339),
+	}, nil
 }
 
 func (o *OCIGatherer) Matcher(uri string) bool {
@@ -126,7 +143,7 @@ func (o OCIMetadata) Get() interface{} {
 	return o
 }
 
-func (o *OCIMetadata) GetDigest() string {
+func (o OCIMetadata) GetDigest() string {
 	return o.Digest
 }
 
@@ -147,25 +164,35 @@ func (o OCIMetadata) GetPinnedURL(u string) (string, error) {
 	return fmt.Sprintf("oci::%s@%s", u, o.Digest), nil
 }
 
-// containsOCIRegistry checks if the input string contains a known OCI registry
+// containsOCIRegistry checks if the input string's hostname matches a known OCI registry.
 func containsOCIRegistry(src string) bool {
-	matchRegistries := []*regexp.Regexp{
-		regexp.MustCompile("azurecr.io"),
-		regexp.MustCompile("gcr.io"),
-		regexp.MustCompile("registry.gitlab.com"),
-		regexp.MustCompile("pkg.dev"),
-		regexp.MustCompile("[0-9]{12}.dkr.ecr.[a-z0-9-]*.amazonaws.com"),
-		regexp.MustCompile("^quay.io"),
-		regexp.MustCompile(`(?:::1|127\.0\.0\.1|(?i:localhost)):\d{1,5}`), // localhost OCI registry
-	}
-
-	for _, matchRegistry := range matchRegistries {
-		if matchRegistry.MatchString(src) {
+	host := extractHost(src)
+	for _, matchRegistry := range ociRegistryPatterns {
+		if matchRegistry.MatchString(host) {
 			return true
 		}
 	}
 	return false
+}
 
+// extractHost returns the lowercase hostname (without port) from a URI,
+// handling scheme prefixes like "oci://", "oci::", "https://", and bare "host/path" forms.
+func extractHost(src string) string {
+	// Strip go-getter style "scheme::" prefixes
+	if idx := strings.Index(src, "::"); idx != -1 {
+		src = src[idx+2:]
+	}
+
+	// Ensure a scheme so url.Parse treats the host correctly
+	if !strings.Contains(src, "://") {
+		src = "oci://" + src
+	}
+
+	u, err := url.Parse(src)
+	if err != nil || u.Host == "" {
+		return strings.ToLower(src)
+	}
+	return strings.ToLower(u.Hostname())
 }
 
 func ociURLParse(source string) string {
