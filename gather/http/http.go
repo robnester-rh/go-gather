@@ -149,13 +149,23 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (meta 
 }
 
 func (h *HTTPGatherer) Matcher(uri string) bool {
-	prefixes := []string{"http://", "https://"}
-	for _, prefix := range prefixes {
-		if strings.HasPrefix(uri, prefix) && !(strings.Contains(uri, "github.com") || strings.Contains(uri, "gitlab.com") || strings.Contains(uri, "bitbucket.org")) {
-			return true
+	u, err := url.Parse(uri)
+	if err != nil {
+		return false
+	}
+	if !strings.EqualFold(u.Scheme, "http") && !strings.EqualFold(u.Scheme, "https") {
+		return false
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "" {
+		return false
+	}
+	for _, vendor := range []string{"github.com", "gitlab.com", "bitbucket.org"} {
+		if host == vendor || strings.HasSuffix(host, "."+vendor) {
+			return false
 		}
 	}
-	return false
+	return true
 }
 
 func (h HTTPMetadata) Get() interface{} {

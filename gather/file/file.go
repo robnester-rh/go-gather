@@ -170,14 +170,19 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 		return nil, fmt.Errorf("failed to parse source URI: %w", err)
 	}
 
-	if _, err := os.Stat(src.Path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("source file does not exist: %w", err)
-	}
-
 	dst, err := url.Parse(destination)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse destination URI: %w", err)
 	}
+
+	srcFile, err := os.Open(src.Path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("source file does not exist: %w", err)
+		}
+		return nil, fmt.Errorf("failed to open source file: %w", err)
+	}
+	defer srcFile.Close()
 
 	if append {
 		dstFile, err = os.OpenFile(dst.Path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0755)
@@ -193,12 +198,6 @@ func (f *FileSaver) save(ctx context.Context, source string, destination string,
 			err = fmt.Errorf("failed to close destination file: %w", cerr)
 		}
 	}()
-
-	srcFile, err := os.Open(src.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer srcFile.Close()
 
 	writtenSize, err := io.Copy(dstFile, srcFile)
 	if err != nil {
