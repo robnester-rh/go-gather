@@ -32,6 +32,8 @@ jobs:
         run: npm install semantic-release@25.0.3 @semantic-release/changelog@6.0.3 @semantic-release/git@10.0.1 @semantic-release/github@12.0.6 @semantic-release/commit-analyzer@13.0.1 @semantic-release/release-notes-generator@14.1.0 conventional-changelog-conventionalcommits@9.3.0
 
       - name: Tag release if needed
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
             echo "Running Semantic Release"
             npx semantic-release
