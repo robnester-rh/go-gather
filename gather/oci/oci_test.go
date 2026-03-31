@@ -33,6 +33,7 @@ import (
 )
 
 func TestOCIGatherer_Matcher(t *testing.T) {
+	t.Parallel()
 	g := &OCIGatherer{}
 
 	tests := []struct {
@@ -47,10 +48,43 @@ func TestOCIGatherer_Matcher(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := g.Matcher(tc.uri)
 			if got != tc.want {
 				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestMatcherOCIRegistries(t *testing.T) {
+	t.Parallel()
+	g := &OCIGatherer{}
+	tests := []struct {
+		name string
+		uri  string
+		want bool
+	}{
+		{"azure container registry", "myregistry.azurecr.io/repo:tag", true},
+		{"google container registry", "gcr.io/project/image:tag", true},
+		{"gitlab registry", "registry.gitlab.com/group/project:tag", true},
+		{"google artifact registry", "us-docker.pkg.dev/project/repo/image:tag", true},
+		{"aws ecr", "123456789012.dkr.ecr.us-east-1.amazonaws.com/repo:tag", true},
+		{"quay.io", "quay.io/namespace/repo:tag", true},
+		{"localhost with port", "localhost:5000/repo:tag", true},
+		{"127.0.0.1 with port", "127.0.0.1:5000/repo:tag", true},
+		{"random domain", "example.com/repo:tag", false},
+		{"empty string", "", false},
+		{"plain text", "hello world", false},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := g.Matcher(tt.uri); got != tt.want {
+				t.Errorf("Matcher(%q) = %v, want %v", tt.uri, got, tt.want)
 			}
 		})
 	}
@@ -170,6 +204,7 @@ func TestOCIGatherer_Gather_CreateDirError(t *testing.T) {
 }
 
 func TestOCIGatherer_ociURLParse(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name   string
 		source string
@@ -181,7 +216,9 @@ func TestOCIGatherer_ociURLParse(t *testing.T) {
 	}
 
 	for _, tc := range tests {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := ociURLParse(tc.source)
 			if got != tc.want {
 				t.Errorf("ociURLParse(%q) = %q, want %q", tc.source, got, tc.want)
@@ -203,7 +240,9 @@ func TestOCIGatherer_Gather_ReplaceLocalhost(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	_, _ = g.Gather(ctx, "oci://localhost:5000/myrepo", t.TempDir())
+	if _, err := g.Gather(ctx, "oci://localhost:5000/myrepo", t.TempDir()); err != nil {
+		t.Fatalf("Gather: %v", err)
+	}
 
 	// Expect the final reference to have "127.0.0.1"
 	if !strings.Contains(gotRef, "127.0.0.1") {
@@ -286,6 +325,7 @@ func TestContainsOCIRegistry(t *testing.T) {
 
 // Optional TestOCIMetadata_Get to show retrieving the raw metadata structure
 func TestOCIMetadata_Get(t *testing.T) {
+	t.Parallel()
 	o := OCIMetadata{
 		Path:      "/tmp/some/path",
 		Digest:    "sha256:123abc",
@@ -300,6 +340,7 @@ func TestOCIMetadata_Get(t *testing.T) {
 
 // Optional TestOCIMetadata_GetDigest ensures the Digest is returned properly
 func TestOCIMetadata_GetDigest(t *testing.T) {
+	t.Parallel()
 	o := &OCIMetadata{
 		Digest: "sha256:123abc",
 	}

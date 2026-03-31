@@ -19,6 +19,7 @@ import "testing"
 
 // TestFileDetector tests the FileDetector function.
 func TestFileDetector(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		uri      string
@@ -59,6 +60,7 @@ func TestFileDetector(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := FileDetector(tc.uri)
 			if got != tc.expected {
 				t.Errorf("FileDetector(%q) = %v, want %v", tc.uri, got, tc.expected)
@@ -69,6 +71,7 @@ func TestFileDetector(t *testing.T) {
 
 // TestGitDetector tests the GitDetector function.
 func TestGitDetector(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		uri      string
@@ -124,6 +127,7 @@ func TestGitDetector(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := GitDetector(tc.uri)
 			if got != tc.expected {
 				t.Errorf("GitDetector(%q) = %v, want %v", tc.uri, got, tc.expected)
@@ -134,6 +138,7 @@ func TestGitDetector(t *testing.T) {
 
 // TestHttpDetector checks if HttpDetector correctly identifies HTTP URLs.
 func TestHttpDetector(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		uri      string
@@ -184,6 +189,7 @@ func TestHttpDetector(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := HttpDetector(tc.uri)
 			if got != tc.expected {
 				t.Errorf("HttpDetector(%q) = %v, want %v", tc.uri, got, tc.expected)
@@ -194,6 +200,7 @@ func TestHttpDetector(t *testing.T) {
 
 // TestOciDetector tests the OciDetector function.
 func TestOciDetector(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
 		name     string
 		uri      string
@@ -234,6 +241,7 @@ func TestOciDetector(t *testing.T) {
 	for _, tc := range testCases {
 		tc := tc // capture range variable
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := OciDetector(tc.uri)
 			if got != tc.expected {
 				t.Errorf("OciDetector(%q) = %v, want %v", tc.uri, got, tc.expected)

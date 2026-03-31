@@ -28,6 +28,7 @@ import (
 )
 
 func TestHTTPGatherer_Matcher(t *testing.T) {
+	t.Parallel()
 	g := &HTTPGatherer{}
 
 	testCases := []struct {
@@ -42,7 +43,9 @@ func TestHTTPGatherer_Matcher(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := g.Matcher(tc.uri)
 			if got != tc.want {
 				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)

@@ -30,6 +30,7 @@ import (
 )
 
 func TestGitGatherer_Matcher(t *testing.T) {
+	t.Parallel()
 	gg := GitGatherer{}
 
 	testCases := []struct {
@@ -48,7 +49,9 @@ func TestGitGatherer_Matcher(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			got := gg.Matcher(tc.uri)
 			if got != tc.want {
 				t.Errorf("Matcher(%q) = %v, want %v", tc.uri, got, tc.want)
@@ -124,4 +127,95 @@ func initLocalGitRepo(t *testing.T, repoDir string) (string, string) {
 	}
 
 	return repoDir, commit.String()
+}
+
+func TestProcessUrl(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		input     string
+		wantSrc   string
+		wantRef   string
+		wantSub   string
+		wantDepth string
+		wantErr   bool
+	}{
+		{
+			name:    "https github URL",
+			input:   "https://github.com/org/repo",
+			wantSrc: "https://github.com/org/repo.git",
+		},
+		{
+			name:    "https with ref",
+			input:   "https://github.com/org/repo?ref=v1.0",
+			wantSrc: "https://github.com/org/repo.git",
+			wantRef: "v1.0",
+		},
+		{
+			name:    "https with ref and subdir",
+			input:   "https://github.com/org/repo?ref=main//subdir",
+			wantSrc: "https://github.com/org/repo.git",
+			wantRef: "main",
+			wantSub: "subdir",
+		},
+		{
+			name:      "https with depth",
+			input:     "https://github.com/org/repo?depth=1",
+			wantSrc:   "https://github.com/org/repo.git",
+			wantDepth: "1",
+		},
+		{
+			name:    "git:: prefix with ref",
+			input:   "git::https://github.com/org/repo?ref=abc123",
+			wantSrc: "https://github.com/org/repo.git",
+			wantRef: "abc123",
+		},
+		{
+			name:    "git@ SSH URL",
+			input:   "git@github.com:org/repo",
+			wantSrc: "https://github.com/org/repo.git",
+		},
+		{
+			name:    "path with subdir via double slash",
+			input:   "https://github.com/org/repo//policies/base",
+			wantSrc: "https://github.com/org/repo.git",
+			wantSub: "policies/base",
+		},
+		{
+			name:    "file path",
+			input:   "file:///tmp/local-repo",
+			wantSrc: "file:///tmp/local-repo",
+		},
+		{
+			name:    "relative file path",
+			input:   "./local-repo",
+			wantSrc: "file://./local-repo",
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			src, ref, subdir, depth, err := processUrl(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("processUrl(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				return
+			}
+			if tt.wantSrc != "" && src != tt.wantSrc {
+				t.Errorf("processUrl(%q) src = %q, want %q", tt.input, src, tt.wantSrc)
+			}
+			if ref != tt.wantRef {
+				t.Errorf("processUrl(%q) ref = %q, want %q", tt.input, ref, tt.wantRef)
+			}
+			if subdir != tt.wantSub {
+				t.Errorf("processUrl(%q) subdir = %q, want %q", tt.input, subdir, tt.wantSub)
+			}
+			if depth != tt.wantDepth {
+				t.Errorf("processUrl(%q) depth = %q, want %q", tt.input, depth, tt.wantDepth)
+			}
+		})
+	}
 }

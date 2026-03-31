@@ -19,6 +19,7 @@ package network
 import "testing"
 
 func TestHostname(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		given    string
 		expected string
@@ -114,7 +115,9 @@ func TestHostname(t *testing.T) {
 	}
 
 	for _, c := range cases {
+		c := c
 		t.Run(c.given, func(t *testing.T) {
+			t.Parallel()
 			if got, expected := Hostname(c.given), c.expected; got != expected {
 				t.Errorf("Hostname(%q) = %q, expected %q", c.given, got, c.expected)
 			}
