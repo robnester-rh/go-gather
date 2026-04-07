@@ -1,6 +1,23 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "github>conforma/.github//config/renovate/renovate.json"
+    "github>conforma/.github//config/renovate/renovate.json",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "fix",
+  "semanticCommitScope": "deps",
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "schedule": ["at any time"],
+    "automerge": true
+  },
+  "packageRules": [
+    {
+      "description": "Group Go version updates across go.mod toolchain and .tool-versions",
+      "matchDepNames": ["go", "golang"],
+      "groupName": "go version"
+    }
   ]
 }
