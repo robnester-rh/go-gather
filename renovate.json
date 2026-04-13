@@ -4,6 +4,7 @@
     "github>conforma/.github//config/renovate/renovate.json",
     "helpers:pinGitHubActionDigests"
   ],
+  "postUpdateOptions": ["gomodTidy"],
   "semanticCommits": "enabled",
   "semanticCommitType": "fix",
   "semanticCommitScope": "deps",
