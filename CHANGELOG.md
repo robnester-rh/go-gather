@@ -1,3 +1,43 @@
+# Changelog
+
+> **This changelog is no longer maintained.** For release notes after v1.1.2,
+> see the [GitHub Releases](https://github.com/conforma/go-gather/releases) page.
+
+## [1.1.2](https://github.com/conforma/go-gather/compare/v1.1.1...v1.1.2) (2026-04-13)
+
+### Bug Fixes
+
+* **deps:** update actions/upload-artifact action to v7.0.1 ([3e6fec5](https://github.com/conforma/go-gather/commit/3e6fec5dcfe11f73dbb5cd425b65c7fc98fbeb43))
+* **deps:** update github actions ([b2496c3](https://github.com/conforma/go-gather/commit/b2496c3c866489f4ef23341cda553182cb7be952))
+
+## [1.1.1](https://github.com/conforma/go-gather/compare/v1.1.0...v1.1.1) (2026-04-07)
+
+### Bug Fixes
+
+* **ci:** add local Renovate overrides for semantic-release compatibility ([9626eab](https://github.com/conforma/go-gather/commit/9626eabbef20d26e6801c3c36d866fe156b2349f))
+
+## [1.1.0](https://github.com/conforma/go-gather/compare/v1.0.2...v1.1.0) (2026-03-31)
+
+### Features
+
+* document library capabilities and security improvements ([d42d23e](https://github.com/conforma/go-gather/commit/d42d23eb1b271bcf2bb3166ef9e17e0164557e57)), closes [#302](https://github.com/conforma/go-gather/issues/302)
+
+### Bug Fixes
+
+* address CodeRabbit review feedback ([7505688](https://github.com/conforma/go-gather/commit/75056882c68d8e6c7bf3474eb2c99dce459bcb93)), closes [#299](https://github.com/conforma/go-gather/issues/299) [#300](https://github.com/conforma/go-gather/issues/300)
+* address CodeRabbit review feedback on CI/CD workflow ([bb12131](https://github.com/conforma/go-gather/commit/bb12131a6de3badac8026d6832df3857897f50df)), closes [#298](https://github.com/conforma/go-gather/issues/298)
+* **ci:** pass GITHUB_TOKEN to semantic-release ([f59d267](https://github.com/conforma/go-gather/commit/f59d267ff27da7213f6c5b116609248e5681cf02)), closes [#302](https://github.com/conforma/go-gather/issues/302)
+* **ci:** remove changelog/git plugins incompatible with branch protection ([9ab663b](https://github.com/conforma/go-gather/commit/9ab663b2851c7b6b8ed927ac7dd79c36296cef7d)), closes [#302](https://github.com/conforma/go-gather/issues/302)
+* **deps:** update go-git to v5.17.1 [SECURITY] ([3a79d5b](https://github.com/conforma/go-gather/commit/3a79d5b81b9c9eb302120c59eaafbef6daac0ea4)), closes [#306](https://github.com/conforma/go-gather/issues/306)
+* fix URL routing bugs and improve code quality ([00ac929](https://github.com/conforma/go-gather/commit/00ac9299ced918aaabf73b8fda15959bf5086926)), closes [#300](https://github.com/conforma/go-gather/issues/300) [#302](https://github.com/conforma/go-gather/issues/302)
+* harden CI/CD pipeline and release workflow ([6bbf6c2](https://github.com/conforma/go-gather/commit/6bbf6c22a41226e28110a766e78981878c730545)), closes [#298](https://github.com/conforma/go-gather/issues/298)
+* harden OCI registry patterns and wrap close errors ([d8639db](https://github.com/conforma/go-gather/commit/d8639dbca1a2028820130f01211e702bc7784350)), closes [#300](https://github.com/conforma/go-gather/issues/300)
+* improve error handling, fix SCP URL parsing, and update documentation ([c0f5dc4](https://github.com/conforma/go-gather/commit/c0f5dc4ece34a89819ca5ef9b2fc2b0f5c7ae7b3)), closes [#300](https://github.com/conforma/go-gather/issues/300) [#302](https://github.com/conforma/go-gather/issues/302)
+* migrate to golangci-lint v2 and fix Makefile targets ([8991327](https://github.com/conforma/go-gather/commit/8991327a0809f4659e3335ac43ed4aeb16d05e22)), closes [#297](https://github.com/conforma/go-gather/issues/297) [#298](https://github.com/conforma/go-gather/issues/298)
+* nil metadata on deferred Close() errors ([9a7b9b7](https://github.com/conforma/go-gather/commit/9a7b9b7640a9bd92bd50910f21bc89fbce6309ff)), closes [#299](https://github.com/conforma/go-gather/issues/299) [#300](https://github.com/conforma/go-gather/issues/300)
+* open source before destination in FileSaver and parse URLs in HTTP Matcher ([1f8fe11](https://github.com/conforma/go-gather/commit/1f8fe1170defb70ec68f25484575f9e8475a67d5)), closes [#304](https://github.com/conforma/go-gather/issues/304)
+* standardize Gather() to return pointer metadata ([def09ee](https://github.com/conforma/go-gather/commit/def09ee11223013f778cf3b9ce374e6ffff6dabb)), closes [#299](https://github.com/conforma/go-gather/issues/299)
+
 ## [1.0.2](https://github.com/conforma/go-gather/compare/v1.0.1...v1.0.2) (2025-03-06)
 
 ### Bug Fixes
