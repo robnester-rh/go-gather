@@ -69,6 +69,13 @@ func NewOCIGatherer(opts ...Option) *OCIGatherer {
 	return g
 }
 
+func effectiveTransport(t http.RoundTripper) http.RoundTripper {
+	if t != nil {
+		return t
+	}
+	return retry.NewTransport(http.DefaultTransport)
+}
+
 var orasCopy = oras.Copy
 
 // localhostHostRegexp matches "localhost" only when it appears as a hostname (after a scheme prefix).
@@ -92,10 +99,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta meta
 	default:
 	}
 
-	transport := o.transport
-	if transport == nil {
-		transport = retry.NewTransport(http.DefaultTransport)
-	}
+	transport := effectiveTransport(o.transport)
 
 	if localhostHostRegexp.MatchString(source) {
 		source = localhostHostRegexp.ReplaceAllString(source, "${1}127.0.0.1${3}")
@@ -241,7 +245,5 @@ func ociURLParse(source string) string {
 }
 
 func init() {
-	gather.RegisterGatherer(NewOCIGatherer(
-		WithTransport(retry.NewTransport(http.DefaultTransport)),
-	))
+	gather.RegisterGatherer(NewOCIGatherer())
 }
