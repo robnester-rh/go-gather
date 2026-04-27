@@ -94,7 +94,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta meta
 
 	transport := o.transport
 	if transport == nil {
-		transport = http.DefaultTransport
+		transport = retry.NewTransport(http.DefaultTransport)
 	}
 
 	if localhostHostRegexp.MatchString(source) {
