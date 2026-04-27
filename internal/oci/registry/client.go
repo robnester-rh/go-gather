@@ -24,7 +24,6 @@ import (
 	"oras.land/oras-go/v2/registry/remote"
 	"oras.land/oras-go/v2/registry/remote/auth"
 	"oras.land/oras-go/v2/registry/remote/credentials"
-	"oras.land/oras-go/v2/registry/remote/retry"
 
 	"github.com/conforma/go-gather/internal/oci/network"
 )
@@ -45,7 +44,7 @@ func SetupClient(repository *remote.Repository, transport http.RoundTripper) err
 	}
 
 	httpClient := &http.Client{
-		Transport: retry.NewTransport(transport),
+		Transport: transport,
 	}
 
 	store, err := credentials.NewStoreFromDocker(credentials.StoreOptions{

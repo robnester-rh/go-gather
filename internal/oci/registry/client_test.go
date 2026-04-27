@@ -17,12 +17,14 @@
 package registry
 
 import (
+	"net/http"
 	"strconv"
 	"testing"
 
 	"github.com/spf13/viper"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/auth"
 )
 
 func TestRepositoryPlainHTTP(t *testing.T) {
@@ -108,5 +110,30 @@ func TestRepositoryPlainHTTP(t *testing.T) {
 				t.Errorf("PlainHTTP = %v, expected %v", got, expected)
 			}
 		})
+	}
+}
+
+func TestSetupClientTransportPassthrough(t *testing.T) {
+	customTransport := &http.Transport{
+		DisableKeepAlives: true,
+	}
+
+	r := remote.Repository{}
+	r.Reference = registry.Reference{Registry: "quay.io"}
+
+	err := SetupClient(&r, customTransport)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The repository's Client is an *auth.Client wrapping an *http.Client.
+	// Verify the http.Client's transport is our custom one, not wrapped in retry.
+	authClient, ok := r.Client.(*auth.Client)
+	if !ok {
+		t.Fatalf("expected *auth.Client, got %T", r.Client)
+	}
+	httpClient := authClient.Client
+	if httpClient.Transport != customTransport {
+		t.Errorf("expected custom transport passed through, got %T", httpClient.Transport)
 	}
 }
