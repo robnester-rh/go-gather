@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package registry configures OCI registry clients with authentication and TLS settings.
 package registry
 
 import (
@@ -30,6 +31,7 @@ import (
 
 /* Originally sourced from the open-policy-agent/conftest project, adapted for go-gather. */
 
+// SetupClient configures the repository with Docker credentials, TLS, and retry transport.
 func SetupClient(repository *remote.Repository, transport http.RoundTripper) error {
 	registry := repository.Reference.Host()
 

@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package tar implements an Expander for tar archives, including gzip and bzip2 compressed variants.
 package tar
 
 import (
@@ -40,11 +41,13 @@ var (
 	untarFunc        = untar
 )
 
+// TarExpander extracts tar, tar.gz, and tar.bz2 archives.
 type TarExpander struct {
 	FileSizeLimit int64
 	FilesLimit    int
 }
 
+// Expand extracts a tar archive from src into the dst directory.
 func (t *TarExpander) Expand(ctx context.Context, src, dst string, umask os.FileMode) error {
 
 	src, err := pathExpanderFunc(src)
@@ -83,6 +86,7 @@ func (t *TarExpander) Expand(ctx context.Context, src, dst string, umask os.File
 	return nil
 }
 
+// Matcher returns true if the file name contains a tar-related extension.
 func (t *TarExpander) Matcher(fileName string) bool {
 	extensions := []string{"tar", "tgz", "tbz2"}
 	for _, ext := range extensions {

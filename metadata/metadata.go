@@ -14,8 +14,10 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package metadata defines the Metadata interface for gather results.
 package metadata
 
+// Metadata provides access to gathered resource metadata and pinned URLs.
 type Metadata interface {
 	Get() interface{}
 	GetPinnedURL(string) (string, error)

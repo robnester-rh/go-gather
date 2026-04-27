@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package gather defines the Gatherer interface and a registry of gatherers.
 package gather
 
 import (
@@ -23,6 +24,7 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
+// Gatherer defines the interface for downloading resources from a URI.
 type Gatherer interface {
 	Gather(ctx context.Context, src, dst string) (metadata.Metadata, error)
 	Matcher(uri string) bool
@@ -30,6 +32,7 @@ type Gatherer interface {
 
 var gatherers []Gatherer
 
+// GetGatherer returns the first registered Gatherer whose Matcher accepts the given URI.
 func GetGatherer(uri string) (Gatherer, error) {
 	for _, gatherer := range gatherers {
 		if gatherer.Matcher(uri) {
@@ -39,6 +42,7 @@ func GetGatherer(uri string) (Gatherer, error) {
 	return nil, fmt.Errorf("no gatherer found for URI: %s", uri)
 }
 
+// RegisterGatherer adds a Gatherer to the global registry.
 func RegisterGatherer(g Gatherer) {
 	gatherers = append(gatherers, g)
 }

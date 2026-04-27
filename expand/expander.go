@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package expand defines the Expander interface and a registry of expanders for compressed files.
 package expand
 
 import (
@@ -25,8 +26,7 @@ import (
 	"os"
 )
 
-/* package expander provides an interface for expanders to implement. Expanders are used to expand compressed files. */
-
+// Expander defines the interface for extracting compressed archives.
 type Expander interface {
 	Expand(ctx context.Context, source string, destination string, umask os.FileMode) error
 	Matcher(extension string) bool
@@ -34,8 +34,10 @@ type Expander interface {
 
 var expanders []Expander
 
+// ExpandOptions holds configuration options for expansion operations.
 type ExpandOptions struct{}
 
+// GetExpander returns the first registered Expander whose Matcher accepts the given extension.
 func GetExpander(extension string) Expander {
 	for _, expander := range expanders {
 		if expander.Matcher(extension) {
@@ -45,6 +47,7 @@ func GetExpander(extension string) Expander {
 	return nil
 }
 
+// RegisterExpander adds an Expander to the global registry.
 func RegisterExpander(e Expander) {
 	expanders = append(expanders, e)
 }
@@ -58,6 +61,7 @@ var magicNumbers = map[string][]byte{
 	"7z":    {0x37, 0x7a, 0xbc, 0xaf, 0x27, 0x1c},
 }
 
+// IsCompressedFile reports whether the file at filePath begins with a known compression magic number.
 func IsCompressedFile(filePath string) (bool, error) {
 	file, err := os.Open(filePath)
 	if err != nil {

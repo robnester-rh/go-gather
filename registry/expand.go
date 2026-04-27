@@ -23,6 +23,7 @@ import (
 	_ "github.com/conforma/go-gather/expand/zip"
 )
 
+// GetExpander returns an Expander for the given extension from the global registry.
 func GetExpander(extension string) expander.Expander {
 	return expander.GetExpander(extension)
 }

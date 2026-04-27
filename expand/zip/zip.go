@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package zip implements an Expander for ZIP archives.
 package zip
 
 import (

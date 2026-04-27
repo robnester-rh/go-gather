@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package http implements a Gatherer for HTTP and HTTPS sources.
 package http
 
 import (
@@ -32,12 +33,15 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
+// Transport is the HTTP transport used for all HTTP gather requests.
 var Transport http.RoundTripper = http.DefaultTransport
 
+// HTTPGatherer gathers resources over HTTP/HTTPS.
 type HTTPGatherer struct {
 	Client http.Client
 }
 
+// HTTPMetadata holds metadata about a gathered HTTP resource.
 type HTTPMetadata struct {
 	URI          string
 	Path         string
@@ -46,12 +50,14 @@ type HTTPMetadata struct {
 	Timestamp    string
 }
 
+// NewHTTPGatherer returns an HTTPGatherer with a default 30-second timeout.
 func NewHTTPGatherer() *HTTPGatherer {
 	return &HTTPGatherer{
 		Client: http.Client{Timeout: 30 * time.Second},
 	}
 }
 
+// Gather downloads a file from rawSource via HTTP and writes it to dst.
 func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (meta metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
@@ -148,6 +154,7 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (meta 
 	}, nil
 }
 
+// Matcher returns true if the URI uses an HTTP or HTTPS scheme and is not a known git host.
 func (h *HTTPGatherer) Matcher(uri string) bool {
 	u, err := url.Parse(uri)
 	if err != nil {
@@ -168,10 +175,12 @@ func (h *HTTPGatherer) Matcher(uri string) bool {
 	return true
 }
 
+// Get returns the HTTPMetadata value.
 func (h HTTPMetadata) Get() interface{} {
 	return h
 }
 
+// GetPinnedURL returns an http:: prefixed URL for the given address.
 func (h HTTPMetadata) GetPinnedURL(u string) (string, error) {
 	if len(u) == 0 {
 		return "", fmt.Errorf("empty URL")

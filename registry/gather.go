@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package registry imports all gatherer and expander implementations and exposes convenience lookup functions.
 package registry
 
 import (
@@ -24,6 +25,7 @@ import (
 	_ "github.com/conforma/go-gather/gather/oci"
 )
 
+// GetGatherer returns a Gatherer for the given URI from the global registry.
 func GetGatherer(uri string) (gather.Gatherer, error) {
 	return gather.GetGatherer(uri)
 }

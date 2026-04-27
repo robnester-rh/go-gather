@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package git implements a Gatherer for git repository sources.
 package git
 
 import (
@@ -39,11 +40,13 @@ import (
 
 var filePathPattern = regexp.MustCompile(`^(\./|\../|/|[a-zA-Z]:\\|~\/).*`)
 
+// GitGatherer gathers resources by cloning git repositories.
 type GitGatherer struct {
 	GitMetadata
 	Authenticator SSHAuthenticator
 }
 
+// GitMetadata holds metadata about a gathered git repository.
 type GitMetadata struct {
 	Path         string
 	CommitHash   string
@@ -62,6 +65,7 @@ type SSHAuthenticator interface {
 // RealSSHAuthenticator represents an implementation of the SSHAuthenticator interface.
 type RealSSHAuthenticator struct{}
 
+// Matcher returns true if the URI looks like a git repository.
 func (g *GitGatherer) Matcher(uri string) bool {
 	prefixes := []string{"git@", "git://", "git::"}
 	for _, term := range prefixes {
@@ -85,6 +89,7 @@ func (g *GitGatherer) Matcher(uri string) bool {
 	return strings.HasSuffix(uri, ".git")
 }
 
+// Gather clones a git repository from src into dst.
 func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Metadata, error) {
 	select {
 	case <-ctx.Done():
@@ -185,10 +190,12 @@ func (g *GitGatherer) Gather(ctx context.Context, src, dst string) (metadata.Met
 	return &m, nil
 }
 
+// Get returns the GitMetadata value.
 func (g GitMetadata) Get() interface{} {
 	return g
 }
 
+// GetPinnedURL returns a git:: URL pinned to the latest commit hash.
 func (g GitMetadata) GetPinnedURL(u string) (string, error) {
 	if len(u) == 0 {
 		return "", fmt.Errorf("empty URL")
