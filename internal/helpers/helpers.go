@@ -152,7 +152,7 @@ func CopyReader(src io.Reader, dst string, mode os.FileMode, fileSizeLimit int64
 // We can override this in tests to simulate errors or special behaviors.
 var userHomeDirFunc = os.UserHomeDir
 
-// PathExpanderFunc expands tilde-prefixed paths to absolute paths. It can be overridden in tests.
+// PathExpanderFunc expands a leading "~" to the current user's home directory. It does not handle "~otheruser" forms. It can be overridden in tests.
 var PathExpanderFunc = func(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {
 		homeDir, err := userHomeDirFunc()
