@@ -31,6 +31,7 @@ import (
 	"oras.land/oras-go/v2/content/file"
 	"oras.land/oras-go/v2/registry"
 	"oras.land/oras-go/v2/registry/remote"
+	"oras.land/oras-go/v2/registry/remote/retry"
 
 	"github.com/conforma/go-gather/gather"
 	r "github.com/conforma/go-gather/internal/oci/registry"
@@ -38,7 +39,10 @@ import (
 )
 
 // OCIGatherer gathers artifacts from OCI-compliant registries.
-type OCIGatherer struct{}
+type OCIGatherer struct {
+	// transport is the http.RoundTripper for registry requests. If nil, http.DefaultTransport is used.
+	transport http.RoundTripper
+}
 
 // OCIMetadata holds metadata about a gathered OCI artifact.
 type OCIMetadata struct {
@@ -47,8 +51,23 @@ type OCIMetadata struct {
 	Timestamp string
 }
 
-// Transport is the HTTP transport used for OCI registry requests.
-var Transport http.RoundTripper = http.DefaultTransport
+// Option configures an OCIGatherer.
+type Option func(*OCIGatherer)
+
+// WithTransport sets the http.RoundTripper used for OCI registry requests.
+// Callers are responsible for wrapping the transport with retry if desired.
+func WithTransport(t http.RoundTripper) Option {
+	return func(g *OCIGatherer) { g.transport = t }
+}
+
+// NewOCIGatherer creates an OCIGatherer with the given options.
+func NewOCIGatherer(opts ...Option) *OCIGatherer {
+	g := &OCIGatherer{}
+	for _, opt := range opts {
+		opt(g)
+	}
+	return g
+}
 
 var orasCopy = oras.Copy
 
@@ -71,6 +90,11 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta meta
 	case <-ctx.Done():
 		return nil, ctx.Err()
 	default:
+	}
+
+	transport := o.transport
+	if transport == nil {
+		transport = http.DefaultTransport
 	}
 
 	if localhostHostRegexp.MatchString(source) {
@@ -99,7 +123,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta meta
 	}
 
 	// Setup the client for the repository
-	if err := r.SetupClient(src, Transport); err != nil {
+	if err := r.SetupClient(src, transport); err != nil {
 		return nil, fmt.Errorf("failed to setup repository client: %w", err)
 	}
 
@@ -217,5 +241,7 @@ func ociURLParse(source string) string {
 }
 
 func init() {
-	gather.RegisterGatherer(&OCIGatherer{})
+	gather.RegisterGatherer(NewOCIGatherer(
+		WithTransport(retry.NewTransport(http.DefaultTransport)),
+	))
 }

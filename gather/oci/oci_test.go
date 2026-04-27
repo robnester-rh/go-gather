@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
 	"strings"
 	"testing"
@@ -348,4 +349,29 @@ func TestOCIMetadata_GetDigest(t *testing.T) {
 	if got != "sha256:123abc" {
 		t.Errorf("GetDigest() = %q, want %q", got, "sha256:123abc")
 	}
+}
+
+func TestOCIGatherer_WithTransport(t *testing.T) {
+	called := false
+	recorder := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		called = true
+		return nil, fmt.Errorf("intentional test stop")
+	})
+
+	g := NewOCIGatherer(WithTransport(recorder))
+
+	ctx := context.Background()
+	// This will fail during SetupClient/auth, but the transport should be invoked
+	_, _ = g.Gather(ctx, "oci://127.0.0.1:5000/test-repo:latest", t.TempDir())
+
+	if !called {
+		t.Error("expected custom transport to be called during Gather")
+	}
+}
+
+// roundTripperFunc adapts a function to http.RoundTripper
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
