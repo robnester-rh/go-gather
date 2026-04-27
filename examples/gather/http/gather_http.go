@@ -39,7 +39,7 @@ func main() {
 	}
 	defer os.RemoveAll(dst)
 
-	h := &http.HTTPGatherer{}
+	h := http.NewHTTPGatherer()
 
 	// Gather the contents of the http repository to the destination directory,
 	m, err := h.Gather(context.Background(), src, dst)
