@@ -64,7 +64,9 @@ func WithTransport(t http.RoundTripper) Option {
 func NewOCIGatherer(opts ...Option) *OCIGatherer {
 	g := &OCIGatherer{}
 	for _, opt := range opts {
-		opt(g)
+		if opt != nil {
+			opt(g)
+		}
 	}
 	return g
 }

@@ -61,7 +61,9 @@ func NewHTTPGatherer(opts ...Option) *HTTPGatherer {
 		Client: http.Client{Timeout: 30 * time.Second},
 	}
 	for _, opt := range opts {
-		opt(g)
+		if opt != nil {
+			opt(g)
+		}
 	}
 	return g
 }
