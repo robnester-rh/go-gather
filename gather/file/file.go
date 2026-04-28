@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package file implements a Gatherer for local filesystem sources.
 package file
 
 import (
@@ -31,8 +32,10 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
+// FileGatherer gathers resources from local file paths.
 type FileGatherer struct{}
 
+// FSMetadata holds metadata about a gathered filesystem resource.
 type FSMetadata struct {
 	URI       string
 	Path      string
@@ -40,8 +43,10 @@ type FSMetadata struct {
 	Timestamp string
 }
 
+// FileSaver copies files between filesystem locations.
 type FileSaver struct{}
 
+// Matcher returns true if the URI looks like a local file path.
 func (f *FileGatherer) Matcher(uri string) bool {
 	prefixes := []string{"file://", "file::", "/", "./", "../"}
 	for _, prefix := range prefixes {
@@ -62,6 +67,7 @@ func (f *FileGatherer) Matcher(uri string) bool {
 	return false
 }
 
+// Gather copies a local file or directory from src to dst.
 func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Metadata, error) {
 	select {
 	case <-ctx.Done():
@@ -140,10 +146,12 @@ func (f *FileGatherer) Gather(ctx context.Context, src, dst string) (metadata.Me
 	return fsaver.save(ctx, src, dst, false)
 }
 
+// Get returns the FSMetadata value.
 func (f FSMetadata) Get() interface{} {
 	return f
 }
 
+// GetPinnedURL returns a deterministic file:: URL for the given path.
 func (f FSMetadata) GetPinnedURL(u string) (string, error) {
 	if len(u) == 0 {
 		return "", fmt.Errorf("empty file path")

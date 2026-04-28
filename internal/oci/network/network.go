@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package network provides helpers for hostname extraction and loopback detection.
 package network
 
 import (
@@ -21,7 +22,7 @@ import (
 	"strings"
 )
 
-/* This code is sourced from the open-policy-agent/conftest project. */
+// Hostname extracts the hostname portion from a registry reference string.
 func Hostname(ref string) string {
 	if ref == "" {
 		return ref
@@ -42,6 +43,7 @@ func Hostname(ref string) string {
 	return ref
 }
 
+// IsLoopback reports whether host resolves to a loopback address.
 func IsLoopback(host string) bool {
 	if host == "localhost" || host == "127.0.0.1" || host == "::1" || host == "0:0:0:0:0:0:0:1" {
 		// fast path

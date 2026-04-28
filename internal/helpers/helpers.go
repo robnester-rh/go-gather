@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package helpers provides filesystem utilities for copying files, directories, and expanding paths.
 package helpers
 
 import (
@@ -151,7 +152,7 @@ func CopyReader(src io.Reader, dst string, mode os.FileMode, fileSizeLimit int64
 // We can override this in tests to simulate errors or special behaviors.
 var userHomeDirFunc = os.UserHomeDir
 
-// PathExpanderFunc is a variable that can be overridden in tests to mock path expansion.
+// PathExpanderFunc expands a leading "~" to the current user's home directory. It does not handle "~otheruser" forms. It can be overridden in tests.
 var PathExpanderFunc = func(path string) (string, error) {
 	if strings.HasPrefix(path, "~") {
 		homeDir, err := userHomeDirFunc()
@@ -163,6 +164,7 @@ var PathExpanderFunc = func(path string) (string, error) {
 	return path, nil
 }
 
+// ExpandPath expands a tilde-prefixed path using PathExpanderFunc.
 func ExpandPath(path string) (string, error) {
 	return PathExpanderFunc(path)
 }

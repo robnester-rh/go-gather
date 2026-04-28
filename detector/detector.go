@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package detector provides functions to identify URI types (file, git, HTTP, OCI).
 package detector
 
 import (

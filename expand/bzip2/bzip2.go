@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package bzip2 implements an Expander for standalone bzip2 compressed files.
 package bzip2
 
 import (
@@ -31,10 +32,12 @@ import (
 
 var pathExpanderFunc = helpers.ExpandPath
 
+// Bzip2Expander decompresses standalone bzip2 files (not tar.bz2).
 type Bzip2Expander struct {
 	FileSizeLimit int64
 }
 
+// Expand decompresses a bzip2 file from src into the dst directory.
 func (b *Bzip2Expander) Expand(ctx context.Context, src, dst string, umask os.FileMode) (err error) {
 	src, err = pathExpanderFunc(src)
 	if err != nil {

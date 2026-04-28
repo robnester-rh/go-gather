@@ -14,6 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package oci implements a Gatherer for OCI registry sources.
 package oci
 
 import (
@@ -36,14 +37,17 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
+// OCIGatherer gathers artifacts from OCI-compliant registries.
 type OCIGatherer struct{}
 
+// OCIMetadata holds metadata about a gathered OCI artifact.
 type OCIMetadata struct {
 	Path      string
 	Digest    string
 	Timestamp string
 }
 
+// Transport is the HTTP transport used for OCI registry requests.
 var Transport http.RoundTripper = http.DefaultTransport
 
 var orasCopy = oras.Copy
@@ -61,6 +65,7 @@ var ociRegistryPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`^(?:::1|127\.0\.0\.1|(?i:localhost))$`),
 }
 
+// Gather pulls an OCI artifact from source into the dst directory.
 func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta metadata.Metadata, err error) {
 	select {
 	case <-ctx.Done():
@@ -128,6 +133,7 @@ func (o *OCIGatherer) Gather(ctx context.Context, source, dst string) (meta meta
 	}, nil
 }
 
+// Matcher returns true if the URI uses an OCI scheme or matches a known OCI registry.
 func (o *OCIGatherer) Matcher(uri string) bool {
 	prefixes := []string{"oci://", "oci::"}
 	for _, prefix := range prefixes {
@@ -139,14 +145,17 @@ func (o *OCIGatherer) Matcher(uri string) bool {
 	return containsOCIRegistry(uri)
 }
 
+// Get returns the OCIMetadata value.
 func (o OCIMetadata) Get() interface{} {
 	return o
 }
 
+// GetDigest returns the digest string of the pulled OCI artifact.
 func (o OCIMetadata) GetDigest() string {
 	return o.Digest
 }
 
+// GetPinnedURL returns an oci:: URL pinned to the artifact digest.
 func (o OCIMetadata) GetPinnedURL(u string) (string, error) {
 	if len(u) == 0 {
 		return "", fmt.Errorf("empty URL")
