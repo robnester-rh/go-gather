@@ -30,7 +30,7 @@ import (
 
 /* Originally sourced from the open-policy-agent/conftest project, adapted for go-gather. */
 
-// SetupClient configures the repository with Docker credentials, TLS, and retry transport.
+// SetupClient configures the repository with Docker credentials, TLS, and the provided HTTP transport.
 func SetupClient(repository *remote.Repository, transport http.RoundTripper) error {
 	registry := repository.Reference.Host()
 

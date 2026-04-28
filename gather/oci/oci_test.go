@@ -361,8 +361,10 @@ func TestOCIGatherer_WithTransport(t *testing.T) {
 	g := NewOCIGatherer(WithTransport(recorder))
 
 	ctx := context.Background()
-	// This will fail during SetupClient/auth, but the transport should be invoked
-	_, _ = g.Gather(ctx, "oci://127.0.0.1:5000/test-repo:latest", t.TempDir())
+	_, err := g.Gather(ctx, "oci://127.0.0.1:5000/test-repo:latest", t.TempDir())
+	if err == nil {
+		t.Fatal("expected Gather to fail due to intentional transport error")
+	}
 
 	if !called {
 		t.Error("expected custom transport to be called during Gather")
