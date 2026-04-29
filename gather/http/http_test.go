@@ -27,6 +27,25 @@ import (
 	"time"
 )
 
+func TestHTTPGatherer_WithTransport(t *testing.T) {
+	customTransport := &http.Transport{
+		DisableKeepAlives: true,
+	}
+	g := NewHTTPGatherer(WithTransport(customTransport))
+
+	if g.Client.Transport != customTransport {
+		t.Errorf("expected custom transport, got %v", g.Client.Transport)
+	}
+}
+
+func TestHTTPGatherer_DefaultTransport(t *testing.T) {
+	g := NewHTTPGatherer()
+
+	if g.Client.Transport != nil {
+		t.Errorf("expected nil (Go default) transport, got %v", g.Client.Transport)
+	}
+}
+
 func TestHTTPGatherer_Matcher(t *testing.T) {
 	t.Parallel()
 	g := &HTTPGatherer{}

@@ -33,8 +33,13 @@ import (
 	"github.com/conforma/go-gather/metadata"
 )
 
-// Transport is the HTTP transport used for all HTTP gather requests.
-var Transport http.RoundTripper = http.DefaultTransport
+// Option configures an HTTPGatherer.
+type Option func(*HTTPGatherer)
+
+// WithTransport sets the http.RoundTripper used by the HTTPGatherer's client.
+func WithTransport(t http.RoundTripper) Option {
+	return func(g *HTTPGatherer) { g.Client.Transport = t }
+}
 
 // HTTPGatherer gathers resources over HTTP/HTTPS.
 type HTTPGatherer struct {
@@ -51,10 +56,16 @@ type HTTPMetadata struct {
 }
 
 // NewHTTPGatherer returns an HTTPGatherer with a default 30-second timeout.
-func NewHTTPGatherer() *HTTPGatherer {
-	return &HTTPGatherer{
+func NewHTTPGatherer(opts ...Option) *HTTPGatherer {
+	g := &HTTPGatherer{
 		Client: http.Client{Timeout: 30 * time.Second},
 	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(g)
+		}
+	}
+	return g
 }
 
 // Gather downloads a file from rawSource via HTTP and writes it to dst.
@@ -108,9 +119,6 @@ func (h *HTTPGatherer) Gather(ctx context.Context, rawSource, dst string) (meta 
 
 	// Set the User-Agent header
 	req.Header.Set("User-Agent", "Go-Gather")
-
-	// Set the transport
-	h.Client.Transport = Transport
 
 	// Perform the HTTP request
 	resp, err := h.Client.Do(req)
@@ -192,5 +200,5 @@ func (h HTTPMetadata) GetPinnedURL(u string) (string, error) {
 }
 
 func init() {
-	gather.RegisterGatherer(&HTTPGatherer{})
+	gather.RegisterGatherer(NewHTTPGatherer())
 }

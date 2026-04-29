@@ -40,7 +40,7 @@ func main() {
 	defer os.RemoveAll(dst)
 
 	// Create a new oci gatherer
-	o := &oci.OCIGatherer{}
+	o := oci.NewOCIGatherer()
 
 	// Gather the contents of the OCI registry to the destination directory,
 	m, err := o.Gather(context.Background(), src, dst)
